@@ -82,10 +82,8 @@ export const useSignedHash = () => {
 }
 
 export const useAllowedSignedHash = () => {
-  const [signedhashquery] =
-    signedHashApiEndpoints.allowedSignedHash.useMutation()
+  const [signedhashquery] = signedHashApiEndpoints.allowedSignedHash.useMutation()
   const queryError = useQueryError()
-  
   const { setglobalalert } = useContext(GlobalErrorContext);
   const { setgloballoadingprogress } = useContext(GlobalLoadingContext);
   
@@ -184,6 +182,7 @@ export const useAllowedQueryResultV2 = () => {
         fnquery({ spname, fnparameter, hashed, body })
           .unwrap()
           .then(({ errorCode, errorDescription, objectData }) => {
+            console.log(objectData)
             if (Number(errorCode) > 0) {
               setgloballoadingprogress(100);
               setglobalalert({error: true, variant: "destructive", body: "Something went wrong please try again."});

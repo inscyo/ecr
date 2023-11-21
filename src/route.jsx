@@ -23,7 +23,6 @@ const ECRHomepage = lazy(() => import("./app/registrar/ecr-homepage"));
 export default function AppRoutes(){
     const { globalalert } = useContext(GlobalErrorContext);
     const { globalloadingprogress, setgloballoadingprogress } = useContext(GlobalLoadingContext);
-    console.log(globalloadingprogress)
     /* 
         # register all routes here
         # database routes and static routes
@@ -31,7 +30,7 @@ export default function AppRoutes(){
     const jsx = (
         <>
             {globalalert?.error && <ShadcnAlert body={globalalert?.body} /> }
-            {globalloadingprogress > 0 && <UiverseLoader progress={globalloadingprogress} progressfn={setgloballoadingprogress} color="#ffc53d" />}
+            {/* {globalloadingprogress > 0 && <UiverseLoader progress={globalloadingprogress} progressfn={setgloballoadingprogress} color="#ffc53d" />} */}
             <BrowserRouter>
                 <Suspense>
                     <Routes>
