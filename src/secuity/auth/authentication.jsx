@@ -1,10 +1,11 @@
 import { useState, useEffect, useContext } from "react";
 import { Outlet, useSearchParams } from "react-router-dom";
 import { browserName, browserVersion } from "react-device-detect";
-import { cryptoDecrypt, cryptoEncrypt, delay } from "../../helpers/all";
+import { cryptoDecrypt, cryptoEncrypt, delay, getRandomNumber } from "../../helpers/all";
 import { GlobalErrorContext } from "../../context/global-alert";
 import Cookies from "js-cookie";
 import useAxiosAPI from "../../hooks/axios-api";
+import { ShadcnCleverEarwig74Loader } from "../../layout/loaders";
 
 export default function Authentication() {
   const { setglobalalert } = useContext(GlobalErrorContext);
@@ -43,8 +44,9 @@ export default function Authentication() {
         curtoken: Cookies.get("token") || "",
       });
       
-      const { "@token": token, UserID: UserId } = examVerifyUserSessionResponse;
-      console.log(examVerifyUserSessionResponse)
+      const { "@token": token, UserId } = examVerifyUserSessionResponse;
+      console.log(UserId)
+      if(!UserId) return setglobalalert({error: true, variant: "destructive", body: "Unauthorized access invalid login credentials."});
       const examGetUserProfileResponse = await apiRequest("Exam_GetUserProfile", "Json", { UserId });
       const { 
         LastName, 
@@ -58,9 +60,7 @@ export default function Authentication() {
         Length 
       } = examGetUserProfileResponse[0];
 
-
       if (Length <= 0) {
-
         setAuthenticated(false);
         setglobalalert({error: true, variant: "destructive", body: "The server encountered an issue while processing the data. Please try again later."});
         return;
@@ -101,8 +101,8 @@ export default function Authentication() {
   };
 
   const onload = async () => {
-    setglobalalert({error: true, color: "#e8e8e8", body: "Authenticating please wait for a while."});
-
+    setglobalalert({error: true, body: <ShadcnCleverEarwig74Loader stroke="#fff" />});
+    await delay(getRandomNumber(300, 1500))
     if (hassession) {
 
       setAuthenticated(true);

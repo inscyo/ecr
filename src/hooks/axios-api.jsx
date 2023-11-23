@@ -1,39 +1,25 @@
-import { useState, useEffect, useContext } from 'react';
+import { useContext } from 'react';
 import axios from 'axios';
 import api from '../helpers/api';
-import { delay, getRandomNumber } from '../helpers/all';
-import { GlobalLoadingContext } from "../context/loading";
 import { GlobalErrorContext } from '../context/global-alert';
-import { ShadcnFastFrog4Loader } from '../layout/loaders';
+import { ShadcnCleverEarwig74Loader } from '../layout/loaders';
 
 const useAxiosAPI = () => {
-  const { setgloballoadingprogress } = useContext(GlobalLoadingContext);
   const { setglobalalert } = useContext(GlobalErrorContext);
 
   const fetchData = async (spname, fnparameter, body) => {
-    setglobalalert({error: true, body: <ShadcnFastFrog4Loader />});
+    setglobalalert({error: true, body: <ShadcnCleverEarwig74Loader stroke="#fff" />});
     try {
       const source = axios.CancelToken.source();
-      setgloballoadingprogress(1);
       
-      await delay(getRandomNumber(500, 1500));
       const { data: esignedData } = await api.post('/Free/SignedHash', body, { cancelToken: source.token });
-      setgloballoadingprogress(50);
-      await delay(getRandomNumber(1000, 2000));
 
       if (!esignedData) {
-        setgloballoadingprogress(100);
         throw new Error('Error retrieving E-signed data.');
       }
 
       const { errorCode: esignedErrorCode, errorDescription: esigned } = esignedData;
-      if (esignedErrorCode > 0) {
-        setgloballoadingprogress(100);
-        throw new Error(`Error in E-signed data: ${esigned}`);
-      }
-
-      setgloballoadingprogress(70);
-      await delay(getRandomNumber(300, 800))
+      if (esignedErrorCode > 0) throw new Error(`Error in E-signed data: ${esigned}`);
 
       const response = await api.post(
         '/Free/QueryResult',
@@ -48,23 +34,21 @@ const useAxiosAPI = () => {
         }
       );
 
-      await delay(getRandomNumber(500, 1500));
-      setgloballoadingprogress(100);
       setglobalalert({error: false});
       const responseData_i = response.data["objectData"] ?? response.data["ObjectData"];
 
       if (responseData_i.includes('"response":')) {
-        const { ErrorCode, ErrorDesc, ObjectData } = JSON.parse(JSON.parse(responseData_i)[0].response)[0];
+        const { ErrorCode, ErrorDesc, ObjectData, UserID } = JSON.parse(JSON.parse(responseData_i)[0].response)[0];
 
         if (Number(ErrorCode) > 0) {
           throw new Error(`Error while processing data: ${ErrorDesc}`);
         }
         const responseData_j = JSON.parse(ObjectData);
+        if(UserID) responseData_j.UserId = UserID;
         return typeof responseData_j !== "object" ? JSON.parse(responseData_j) : responseData_j;
       }
       return typeof responseData_i !== "object" ? JSON.parse(responseData_i) : responseData_i;
     } catch (error) {
-      setgloballoadingprogress(100);
       if (axios.isCancel(error)) {
         setglobalalert({error: true, body: "Request was canceled."});
         throw new Error('Request was canceled');

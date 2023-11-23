@@ -4,6 +4,7 @@ import { Provider as ReduxProvider } from "react-redux";
 import SocketContextProvider from './context/socket.context';
 import GlobalErrorContextProvider from './context/global-alert';
 import GlobalLoadingContextProvider from './context/loading';
+import PageTitleContextProvider from './context/page-title';
 
 const ProviderComposer = ({ contexts, children }) => {
     return contexts.reduceRight((kids, parent) => {
@@ -19,6 +20,7 @@ const ContextProvider = ({ children }) => {
                 <ReduxProvider store={rtkstore} />,
                 <SocketContextProvider />,
                 <GlobalErrorContextProvider />,
+                <PageTitleContextProvider />
             ]
         }>
             {children}

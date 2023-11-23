@@ -18,7 +18,11 @@ import { GlobalLoadingContext } from "./context/loading";
 
 /* # register all components here */
 const DefaultIndex = lazy(() => import("./app/default")); 
-const ECRHomepage = lazy(() => import("./app/registrar/ecr-homepage")); 
+const ACRHomepage = lazy(() => import("./app/acr/registrar/ecr-homepage")); 
+const ACRStudentRequest = lazy(() => import("./app/acr/student/request")); 
+const ACRDashboard = lazy(() => import("./app/acr/registrar/dashboard"));
+const PurchaseOrderTagging = lazy(() => import("./app/acr/registrar/purchase-order-tagging"));
+const DeliveryReceiptTagging = lazy(() => import("./app/acr/registrar/delivery-receipt-tagging"));
 
 export default function AppRoutes(){
     const { globalalert } = useContext(GlobalErrorContext);
@@ -37,7 +41,11 @@ export default function AppRoutes(){
                         <Route element={<Authentication />}>
                             <Route element={<DefaultLayout />}>
                                 <Route path="/" exact element={<DefaultIndex />} />
-                                <Route path="/registrar/ecr" exact element={<ECRHomepage />} />
+                                <Route path="/acr/registrar" exact element={<ACRHomepage />} />
+                                <Route path="/acr/registrar/dashboard" exact element={<ACRDashboard />} />
+                                <Route path="/acr/registrar/purchase-order-tagging" exact element={<PurchaseOrderTagging />} />
+                                <Route path="/acr/registrar/delivery-receipt-tagging" exact element={<DeliveryReceiptTagging />} />
+                                <Route path="/acr/student/request" exact element={<ACRStudentRequest />} />
                             </Route>
                         </Route>
                     </Routes>
