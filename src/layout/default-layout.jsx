@@ -11,7 +11,7 @@ export default function DefaultLayout(){
     const { setTheme, theme } = useContext(PageTitleContext)
 
     return (
-        <div className="p-[2em] pt-0 container">
+        <div className="p-[2em] pt-0 ">
             <div className=" flex py-4 items-center mb-[20px]">
                 <div className="mr-4 md:flex">
                     <a className="mr-3 flex items-center space-x-3" href="/">

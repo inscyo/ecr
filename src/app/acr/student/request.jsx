@@ -10,17 +10,339 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-
+import { Copy } from "lucide-react";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useContext } from "react";
+import { useContext, useRef, useState } from "react";
 import { PageTitleContext } from "../../../context/page-title";
 import { useEffect } from "react";
+import { GlobalErrorContext } from "../../../context/global-alert";
+import { ShadcnCleverEarwig74Loader } from "../../../layout/loaders";
+import {
+  cryptoEncrypt,
+  delay,
+  formatNumberWithCommas,
+  truncateFilenameWithExtension,
+} from "../../../helpers/all";
+import useAxiosAPI from "../../../hooks/axios-api";
+import { cryptoDecrypt } from "../../../helpers/all";
+import Cookies from "js-cookie";
+import { replaceExceedingLetters } from "../../../helpers/string";
+import { useMemo } from "react";
+
 const ACRStudentRequest = () => {
-  const {settitle} = useContext(PageTitleContext);
+  const apiRequest = useAxiosAPI();
+  const { settitle } = useContext(PageTitleContext);
+  const { setglobalalert } = useContext(GlobalErrorContext);
+  const [addedfilelist, setaddedfilelist] = useState([]);
+  const [availablerequestlist, setavailablerequestlist] = useState([]);
+  const [selectedrequestitem, setselectedrequestitem] = useState([]);
+  const [selecteditemrequireddocuments, setselecteditemrequireddocuments] =
+    useState([]);
+
+  const {
+    UserId: StudentID,
+    FirstName,
+    MiddleName,
+    LastName,
+  } = JSON.parse(cryptoDecrypt(Cookies.get("user")));
+
+  // refs
+  const addfileref = useRef();
+  const controlnumberref = useRef();
+  const itemaddedtotalamountref = useRef();
+
+  const requestcontrolnumber = async () => {
+    const response = await apiRequest("ACR_RequestControlNumber", "", {});
+    const controlnumber = response?.[0]?.GeneratedControlNumber;
+    if (!controlnumber) {
+      setglobalalert({
+        error: true,
+        variant: "destructive",
+        body: "Something went wrong please reload the page.",
+      });
+      return;
+    }
+    controlnumberref.current = controlnumber;
+  };
+
+  const getrequestdocumentlist = async () => {
+    const btn = document.querySelector(".open-request-item-selection");
+    if (availablerequestlist.length > 0) return btn?.click();
+    const response = await apiRequest("ACR_StudentRequestItems", "", {});
+    if (!response || response.length <= 0) {
+      setglobalalert({
+        error: true,
+        variant: "destructive",
+        body: "Something went wrong please reload the page.",
+      });
+      return;
+    }
+    setavailablerequestlist(
+      response.map((d) => {
+        d.hash = cryptoEncrypt(JSON.stringify(d));
+        return d;
+      }),
+    );
+    btn?.click();
+  };
+
+  const addrequestitemfn = async () => {
+    const requesteditem = document.querySelector(
+      ".selected-request-item",
+    ).innerText;
+    const warning = document.querySelector(".request-item-warning");
+    warning.style.display = "none";
+    warning.style.color = "#FFA057";
+
+    try {
+      if (requesteditem?.length <= 0 || requesteditem?.length == 2) {
+        warning.style.display = "block";
+        warning.innerText = "Please select an item";
+        return;
+      }
+
+      const availablerequestliststring = JSON.stringify(availablerequestlist);
+
+      if (!availablerequestliststring.includes(requesteditem)) {
+        warning.style.display = "block";
+        warning.innerText = "Something went wrong please try again";
+        return;
+      }
+
+      const {
+        ItemCode,
+        ItemDesc,
+        ItemPrice,
+        MinAmount,
+        MaxAmount,
+        DeliveryFee,
+      } = JSON.parse(cryptoDecrypt(requesteditem)) ?? undefined;
+      const alreadyadded = selectedrequestitem.filter(
+        (e) => e.ItemCode == ItemCode,
+      );
+      if (alreadyadded.length > 0) {
+        warning.style.display = "block";
+        warning.innerText = "Item already added";
+        return;
+      }
+      const requireddocumentsresponse = await apiRequest(
+        "ACR_RequestItemCodeRequiredDocuments",
+        "Json",
+        { ItemCode },
+      );
+
+      if (requireddocumentsresponse?.length > 0)
+        setselecteditemrequireddocuments((p) => [
+          ...p,
+          ...requireddocumentsresponse.filter(
+            ({
+              ItemCode,
+              RequiredDocumentCode,
+              RequiredDocumentDescription,
+              Required,
+            }) =>
+              ItemCode && {
+                ItemCode,
+                RequiredDocumentCode,
+                RequiredDocumentDescription,
+                Required,
+              },
+          ),
+        ]);
+
+      setselectedrequestitem((p) => [
+        ...p,
+        {
+          ItemCode,
+          ItemDesc,
+          ItemPrice,
+          MinAmount,
+          MaxAmount,
+          DeliveryFee,
+          Quantity: 1,
+          TotalAmount: ItemPrice + DeliveryFee,
+        },
+      ]);
+      warning.innerText = "Item added successfully";
+      warning.style.display = "block";
+      warning.style.color = "#33B074";
+    } catch (err) {
+      warning.style.display = "block";
+      warning.innerText = "Something went wrong please try again";
+    }
+  };
+
+  const addfilefn = async (el, documentcode) => {
+    const btn = el.target;
+    const currentref = addfileref.current;
+    const file = currentref.files[0];
+    const loader = document.querySelector(".addfilefnrefloader");
+    const warning = document.querySelector(".file-warning-message");
+    warning.style.display = "none";
+    warning.style.color = "#FFA057";
+
+    if (!file) {
+      warning.style.display = "block";
+      warning.innerText = "Please select a file";
+      return;
+    }
+
+    loader.style.display = "block";
+    currentref.style.cursor = "not-allowed";
+    btn.style.cursor = "not-allowed";
+    currentref.disabled = true;
+    btn.disabled = true;
+    await delay(1000);
+
+    if (file?.size <= 0) {
+      warning.style.display = "block";
+      warning.innerText = "Please select a file";
+      return;
+    }
+
+    const readFile = (f) => {
+      return new Promise((resolve) => {
+        try {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const fileData = e.target.result;
+            resolve({ name: file?.name, file: fileData });
+          };
+          reader.readAsDataURL(f);
+        } catch (err) {
+          warning.innerText = "Unable to add file please try again";
+          warning.style.display = "block";
+          loader.style.display = "none";
+          currentref.style.cursor = "pointer";
+          btn.style.cursor = "pointer";
+          currentref.disabled = false;
+          btn.disabled = false;
+        }
+      });
+    };
+
+    const readedFile = await readFile(file);
+    setselecteditemrequireddocuments(p => {
+      return p.map(docs => {
+        if(docs.RequiredDocumentCode === documentcode){
+          docs.UploadedFileName = readedFile?.name;
+          docs.UploadedFileData = readedFile?.file;
+        }
+        return docs;
+      })
+    });
+    addfileref.current.value = "";
+    currentref.style.cursor = "pointer";
+    btn.style.cursor = "pointer";
+    currentref.disabled = false;
+    btn.disabled = false;
+    loader.style.display = "none";
+    warning.innerText = "File added successfully";
+    warning.style.display = "block";
+    warning.style.color = "#33B074";
+  };
+
+  const calculatetotalunitprice = ({ target }, item, itemelement) => {
+    const inputValue = target.value.trim();
+    const value = parseInt(inputValue.replace(/[^0-9]/g, ""), 10) || 0;
+
+    target.value = value;
+
+    const el = document.querySelector(`.${itemelement}`);
+    const unitprice = value * item?.ItemPrice;
+    let totalamount = 0;
+    if (value < 0) {
+      target.value = 0;
+    } else if (unitprice > item?.MaxAmount) {
+      const maxQuantity = Math.ceil(item?.MaxAmount / item?.ItemPrice);
+      target.value = maxQuantity;
+      totalamount = item?.MaxAmount;
+    } else {
+      totalamount = unitprice;
+    }
+
+    const finalamount = totalamount;
+    el.innerText = formatNumberWithCommas(finalamount + item?.DeliveryFee);
+    if (item?.ItemPrice == item?.MaxAmount || finalamount == item?.MaxAmount)
+      return;
+    setselectedrequestitem((requestitems) => {
+      return requestitems.map((items) => {
+        if (items.ItemCode == item.ItemCode) {
+          items.Quantity = value;
+          items.TotalAmount = finalamount + item?.DeliveryFee;
+        }
+        return items;
+      });
+    });
+  };
+
+  const removeselecteditem = (itemcode) => {
+    if (!itemcode) return;
+    setselectedrequestitem((requestitems) =>
+      requestitems.filter((item) => item.ItemCode != itemcode),
+    );
+    if(selecteditemrequireddocuments?.length <= 0) return;
+    setselecteditemrequireddocuments(p => p.filter(docs => docs?.ItemCode != itemcode));
+  };
+
+  const requestitemtotalamount = useMemo(() => {
+    let amount = 0;
+    for (let item of selectedrequestitem) {
+      amount += item?.TotalAmount;
+    }
+    return formatNumberWithCommas(amount);
+  }, [selectedrequestitem]);
+
+  const studentemailref = useRef();
+  const studentcontactref = useRef();
+  const studentpurposeref = useRef();
+  const studentdeliverymoderef = useRef();
+  const studentlineaddress1ref = useRef();
+  const studentlineaddress2ref = useRef();
+  const studentprovinceref = useRef();
+  const studentmunicipalitycityref = useRef();
+  const studentcountryref = useRef();
+  const studentzipcoderef = useRef();
+
+  const payrequest = () => {
+    const program = document.querySelector(".program-selected")?.innerText;
+    const studentemail = studentemailref.current?.value;
+    const studentcontact = studentcontactref.current?.value;
+    const studentpurpose = studentpurposeref.current?.value;
+    const studentdeliverymode = studentdeliverymoderef.current || "direct-delivery";
+    const studentlineaddress1 = studentlineaddress1ref.current?.value;
+    const studentlineaddress2 = studentlineaddress2ref.current?.value;
+    const studentprovince = studentprovinceref.current?.value;
+    const studentmunicipalitycity = studentmunicipalitycityref.current?.value;
+    const studentcountry = studentcountryref.current?.value;
+    const studentzipcode = studentzipcoderef.current?.value;
+
+  }
 
   useEffect(() => {
     settitle("Student Request");
+    requestcontrolnumber();
   }, []);
 
   return (
@@ -38,8 +360,10 @@ const ACRStudentRequest = () => {
                   Student#:
                 </label>
                 <Input
-                  className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex disabled h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
+                  disabled={true}
+                  defaultValue={StudentID}
                   placeholder="--"
                 />
               </div>
@@ -55,14 +379,11 @@ const ACRStudentRequest = () => {
                     <SelectValue placeholder="--" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Fruits</SelectLabel>
-                      <SelectItem value="apple">Apple</SelectItem>
-                      <SelectItem value="banana">Banana</SelectItem>
-                      <SelectItem value="blueberry">Blueberry</SelectItem>
-                      <SelectItem value="grapes">Grapes</SelectItem>
-                      <SelectItem value="pineapple">Pineapple</SelectItem>
-                    </SelectGroup>
+                    <SelectItem value="apple">Apple <span className="hidden program-selected">apple</span></SelectItem>
+                    <SelectItem value="banana">Banana <span className="hidden program-selected">banana</span></SelectItem>
+                    <SelectItem value="blueberry">Blueberry <span className="hidden program-selected">blueberry</span></SelectItem>
+                    <SelectItem value="grapes">Grapes <span className="hidden program-selected">grapes</span></SelectItem>
+                    <SelectItem value="pineapple">Pineapple <span className="hidden program-selected">pineapple</span></SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -74,9 +395,11 @@ const ACRStudentRequest = () => {
                   Request Control#:
                 </label>
                 <Input
-                  className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex disabled h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
+                  disabled={true}
                   placeholder="--"
+                  defaultValue={controlnumberref.current}
                 />
               </div>
             </div>
@@ -88,36 +411,13 @@ const ACRStudentRequest = () => {
                 Student Name:
               </label>
               <Input
-                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex disabled h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 id="subject"
                 placeholder="--"
-              />
-            </div>
-            <div className="grid gap-2 mb-4">
-              <label
-                className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                htmlFor="description"
-              >
-                Purpose:
-              </label>
-              <Textarea
-                className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                id="description"
-                placeholder="Enter your word here."
-                defaultValue={""}
-              />
-            </div>
-            <div className="grid gap-2 mb-4">
-              <label
-                className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                htmlFor="subject"
-              >
-                Request Control:
-              </label>
-              <Input
-                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                id="subject"
-                placeholder="--"
+                disabled={true}
+                defaultValue={`${LastName || "-"}, ${FirstName || "-"} ${
+                  MiddleName || "-"
+                }`}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -129,6 +429,7 @@ const ACRStudentRequest = () => {
                   Email:
                 </label>
                 <Input
+                  ref={studentemailref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   placeholder="--"
@@ -142,11 +443,27 @@ const ACRStudentRequest = () => {
                   Contact#:
                 </label>
                 <Input
+                  ref={studentcontactref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   placeholder="--"
                 />
               </div>
+            </div>
+            <div className="grid gap-2 mb-4">
+              <label
+                className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                htmlFor="description"
+              >
+                Purpose:
+              </label>
+              <Textarea
+                ref={studentpurposeref}
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                id="description"
+                placeholder="--"
+                defaultValue={""}
+              />
             </div>
           </div>
         </div>
@@ -160,224 +477,118 @@ const ACRStudentRequest = () => {
         <div className="pt-0">
           <div className="rounded-md border">
             <div className="relative w-full overflow-auto">
-              <table className="w-full caption-bottom text-sm">
-                <thead className="[&_tr]:border-b">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      Document Type
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left">QTY</div>
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left">Unit Price</div>
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left">Total</div>
-                    </th>
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-center">Action</div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                  <tr
-                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                    data-state="false"
-                  >
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="">Transcript of records</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="capitalize">2</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="">500.00</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left font-medium">1,000.00</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-center justify-center  text-[#E54D2E] cursor-pointer w-auto flex">
-                        Delete{" "}
-                        <span className="ml-2 relative top-[4px]">
-                          <svg
-                            width="15"
-                            height="15"
-                            viewBox="0 0 15 15"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/60">
+                    <TableHead>Document Type</TableHead>
+                    <TableHead>QTY</TableHead>
+                    <TableHead>Unit Price</TableHead>
+                    <TableHead>Delivery Fee</TableHead>
+                    <TableHead>Total + Delivery Fee</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedrequestitem.length > 0 &&
+                    selectedrequestitem.map((item, i) => {
+                      return (
+                        <TableRow key={i} className="bg-muted/60">
+                          <TableCell className="font-medium">
+                            {item?.ItemDesc}
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              className="flex w-[100px] disabled focus:outline-none border-none bg-transparent px-2 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                              id="subject"
+                              defaultValue={1}
+                              placeholder="--"
+                              type="number"
+                              onInput={(el) =>
+                                calculatetotalunitprice(
+                                  el,
+                                  item,
+                                  `request-item-unit-${item?.ItemCode}`,
+                                )
+                              }
+                              onBlur={(el) =>
+                                calculatetotalunitprice(
+                                  el,
+                                  item,
+                                  `request-item-unit-${item?.ItemCode}`,
+                                )
+                              }
+                              onChange={(el) =>
+                                calculatetotalunitprice(
+                                  el,
+                                  item,
+                                  `request-item-unit-${item?.ItemCode}`,
+                                )
+                              }
+                              min={1}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {formatNumberWithCommas(item.ItemPrice)}
+                          </TableCell>
+                          <TableCell>
+                            {formatNumberWithCommas(item.DeliveryFee)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-left capitalize request-item-unit-${item?.ItemCode}`}
                           >
-                            <path
-                              d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
-                              fill="currentColor"
-                              fillRule="evenodd"
-                              clipRule="evenodd"
-                            ></path>
-                          </svg>
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr
-                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                    data-state="false"
-                  >
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="">Diploma</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="capitalize">1</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="">400.00</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left font-medium">400.00</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-center justify-center  text-[#E54D2E] cursor-pointer w-auto flex">
-                        Delete{" "}
-                        <span className="ml-2 relative top-[4px]">
-                          <svg
-                            width="15"
-                            height="15"
-                            viewBox="0 0 15 15"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
-                              fill="currentColor"
-                              fillRule="evenodd"
-                              clipRule="evenodd"
-                            ></path>
-                          </svg>
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                            {formatNumberWithCommas(
+                              item.ItemPrice + item.DeliveryFee,
+                            )}
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <div
+                              onClick={() => removeselecteditem(item?.ItemCode)}
+                              className="text-[#E54D2E] cursor-pointer w-auto flex"
+                            >
+                              Remove{" "}
+                              <span className="ml-2 relative top-[4px]">
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 15 15"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
+                                    fill="currentColor"
+                                    fillRule="evenodd"
+                                    clipRule="evenodd"
+                                  ></path>
+                                </svg>
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  {selectedrequestitem.length <= 0 && (
+                    <TableRow className="bg-muted/60">
+                      <TableCell
+                        colSpan={6}
+                        className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3"
+                      >
+                        -
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
         </div>
         <div className="flex mt-2">
-          <Button className="w-auto disabled text-[#fff] rounded-sm bg-[#104D87] hover:bg-[#104D87] mt-[10px] text-center">
-            Payment Details
-            <span className="ml-2">
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M7.49991 0.876892C3.84222 0.876892 0.877075 3.84204 0.877075 7.49972C0.877075 11.1574 3.84222 14.1226 7.49991 14.1226C11.1576 14.1226 14.1227 11.1574 14.1227 7.49972C14.1227 3.84204 11.1576 0.876892 7.49991 0.876892ZM1.82707 7.49972C1.82707 4.36671 4.36689 1.82689 7.49991 1.82689C10.6329 1.82689 13.1727 4.36671 13.1727 7.49972C13.1727 10.6327 10.6329 13.1726 7.49991 13.1726C4.36689 13.1726 1.82707 10.6327 1.82707 7.49972ZM8.24992 4.49999C8.24992 4.9142 7.91413 5.24999 7.49992 5.24999C7.08571 5.24999 6.74992 4.9142 6.74992 4.49999C6.74992 4.08577 7.08571 3.74999 7.49992 3.74999C7.91413 3.74999 8.24992 4.08577 8.24992 4.49999ZM6.00003 5.99999H6.50003H7.50003C7.77618 5.99999 8.00003 6.22384 8.00003 6.49999V9.99999H8.50003H9.00003V11H8.50003H7.50003H6.50003H6.00003V9.99999H6.50003H7.00003V6.99999H6.50003H6.00003V5.99999Z"
-                  fill="currentColor"
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                ></path>
-              </svg>
-            </span>
-          </Button>
-          <p className="p-2 px-4 mt-2 ml-4  text-[#fff] inline-block rounded-sm font-medium">
-            {" "}
-            <span>
-              Total Amount: <span>1,400.00</span> PHP
-            </span>
-          </p>
-        </div>
-      </div>
-      <div className="rounded-xl p-6 mb-6 scroll-pb-60 border bg-card text-card-foreground">
-        <div className="flex flex-col mb-4 mt-4 space-y-1.5">
-          <h2 className="font-semibold text-xl leading-none tracking-tight">
-            Uploading Supporting Documents
-          </h2>
-        </div>
-        <div className="pt-0">
-          <div className="rounded-md border">
-            <div className="relative w-full overflow-auto">
-              <table className="w-full caption-bottom text-sm">
-                <thead className="[&_tr]:border-b">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left">File(s)</div>
-                    </th>
-                    <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-center">Action</div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                  <tr
-                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                    data-state="false"
-                  >
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left">School ID</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-center justify-center  text-[#E54D2E] cursor-pointer w-auto flex">
-                        Delete{" "}
-                        <span className="ml-2 relative top-[4px]">
-                          <svg
-                            width="15"
-                            height="15"
-                            viewBox="0 0 15 15"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
-                              fill="currentColor"
-                              fillRule="evenodd"
-                              clipRule="evenodd"
-                            ></path>
-                          </svg>
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr
-                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                    data-state="false"
-                  >
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-left">PSA</div>
-                    </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                      <div className="text-center justify-center  text-[#E54D2E] cursor-pointer w-auto flex">
-                        Delete{" "}
-                        <span className="ml-2 relative top-[4px]">
-                          <svg
-                            width="15"
-                            height="15"
-                            viewBox="0 0 15 15"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
-                              fill="currentColor"
-                              fillRule="evenodd"
-                              clipRule="evenodd"
-                            ></path>
-                          </svg>
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div className="flex">
           <div className=" justify-start">
-            <Button className="w-[100px] text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] mt-[20px] text-center">
-              Upload
+            <Button
+              onClick={getrequestdocumentlist}
+              className="w-auto disabled text-[#fff] rounded-sm bg-[#104D87] hover:bg-[#104D87] mt-[10px] text-center"
+            >
+              Add Item
               <span className="ml-2">
                 <svg
                   width="15"
@@ -387,7 +598,7 @@ const ACRStudentRequest = () => {
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
-                    d="M7.81825 1.18188C7.64251 1.00615 7.35759 1.00615 7.18185 1.18188L4.18185 4.18188C4.00611 4.35762 4.00611 4.64254 4.18185 4.81828C4.35759 4.99401 4.64251 4.99401 4.81825 4.81828L7.05005 2.58648V9.49996C7.05005 9.74849 7.25152 9.94996 7.50005 9.94996C7.74858 9.94996 7.95005 9.74849 7.95005 9.49996V2.58648L10.1819 4.81828C10.3576 4.99401 10.6425 4.99401 10.8182 4.81828C10.994 4.64254 10.994 4.35762 10.8182 4.18188L7.81825 1.18188ZM2.5 9.99997C2.77614 9.99997 3 10.2238 3 10.5V12C3 12.5538 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2238 12.2239 9.99997 12.5 9.99997C12.7761 9.99997 13 10.2238 13 10.5V12C13 13.104 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2238 2.22386 9.99997 2.5 9.99997Z"
+                    d="M4.2 1H4.17741H4.1774C3.86936 0.999988 3.60368 0.999978 3.38609 1.02067C3.15576 1.04257 2.92825 1.09113 2.71625 1.22104C2.51442 1.34472 2.34473 1.51442 2.22104 1.71625C2.09113 1.92825 2.04257 2.15576 2.02067 2.38609C1.99998 2.60367 1.99999 2.86935 2 3.17738V3.1774V3.2V11.8V11.8226V11.8226C1.99999 12.1307 1.99998 12.3963 2.02067 12.6139C2.04257 12.8442 2.09113 13.0717 2.22104 13.2837C2.34473 13.4856 2.51442 13.6553 2.71625 13.779C2.92825 13.9089 3.15576 13.9574 3.38609 13.9793C3.60368 14 3.86937 14 4.17741 14H4.2H10.8H10.8226C11.1306 14 11.3963 14 11.6139 13.9793C11.8442 13.9574 12.0717 13.9089 12.2837 13.779C12.4856 13.6553 12.6553 13.4856 12.779 13.2837C12.9089 13.0717 12.9574 12.8442 12.9793 12.6139C13 12.3963 13 12.1306 13 11.8226V11.8V3.2V3.17741C13 2.86936 13 2.60368 12.9793 2.38609C12.9574 2.15576 12.9089 1.92825 12.779 1.71625C12.6553 1.51442 12.4856 1.34472 12.2837 1.22104C12.0717 1.09113 11.8442 1.04257 11.6139 1.02067C11.3963 0.999978 11.1306 0.999988 10.8226 1H10.8H4.2ZM3.23875 2.07368C3.26722 2.05623 3.32362 2.03112 3.48075 2.01618C3.64532 2.00053 3.86298 2 4.2 2H10.8C11.137 2 11.3547 2.00053 11.5193 2.01618C11.6764 2.03112 11.7328 2.05623 11.7613 2.07368C11.8285 2.11491 11.8851 2.17147 11.9263 2.23875C11.9438 2.26722 11.9689 2.32362 11.9838 2.48075C11.9995 2.64532 12 2.86298 12 3.2V11.8C12 12.137 11.9995 12.3547 11.9838 12.5193C11.9689 12.6764 11.9438 12.7328 11.9263 12.7613C11.8851 12.8285 11.8285 12.8851 11.7613 12.9263C11.7328 12.9438 11.6764 12.9689 11.5193 12.9838C11.3547 12.9995 11.137 13 10.8 13H4.2C3.86298 13 3.64532 12.9995 3.48075 12.9838C3.32362 12.9689 3.26722 12.9438 3.23875 12.9263C3.17147 12.8851 3.11491 12.8285 3.07368 12.7613C3.05624 12.7328 3.03112 12.6764 3.01618 12.5193C3.00053 12.3547 3 12.137 3 11.8V3.2C3 2.86298 3.00053 2.64532 3.01618 2.48075C3.03112 2.32362 3.05624 2.26722 3.07368 2.23875C3.11491 2.17147 3.17147 2.11491 3.23875 2.07368ZM5 10C4.72386 10 4.5 10.2239 4.5 10.5C4.5 10.7761 4.72386 11 5 11H8C8.27614 11 8.5 10.7761 8.5 10.5C8.5 10.2239 8.27614 10 8 10H5ZM4.5 7.5C4.5 7.22386 4.72386 7 5 7H10C10.2761 7 10.5 7.22386 10.5 7.5C10.5 7.77614 10.2761 8 10 8H5C4.72386 8 4.5 7.77614 4.5 7.5ZM5 4C4.72386 4 4.5 4.22386 4.5 4.5C4.5 4.77614 4.72386 5 5 5H10C10.2761 5 10.5 4.77614 10.5 4.5C10.5 4.22386 10.2761 4 10 4H5Z"
                     fill="currentColor"
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -395,23 +606,202 @@ const ACRStudentRequest = () => {
                 </svg>
               </span>
             </Button>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-auto open-request-item-selection hidden disabled text-[#fff] rounded-sm bg-[#104D87] hover:bg-[#104D87] mt-[10px] text-center"></Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Request Document</DialogTitle>
+                  <DialogDescription>
+                    Select the desired item and proceed by clicking submit
+                  </DialogDescription>
+                </DialogHeader>
+                <Select>
+                  <SelectTrigger className="flex h-auto rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                    <SelectValue placeholder="--" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablerequestlist.map((items, i) => {
+                      return (
+                        <SelectItem
+                          key={i}
+                          title={items.ItemDesc}
+                          value={items?.ItemCode}
+                        >
+                          {items.ItemDesc}
+                          <span className="hidden selected-request-item">
+                            {items?.hash}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <DialogDescription className="request-item-warning hidden"></DialogDescription>
+                <DialogFooter className="sm:justify-start flex">
+                  <Button
+                    onClick={(el) => addrequestitemfn(el)}
+                    type="button"
+                    variant="secondary"
+                  >
+                    Submit
+                  </Button>
+                  <ShadcnCleverEarwig74Loader
+                    strokewidth="5"
+                    classess="ml-2 mt-2 hidden addfilefnrefloader"
+                    width="20px"
+                    height="20px"
+                    stroke="#B4B4B4"
+                  />
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <p className="p-2 px-4 mt-2 ml-4  text-[#fff] inline-block rounded-sm font-medium">
+            {" "}
+            <span>
+              Total Amount: <span>{requestitemtotalamount}</span> PHP
+            </span>
+          </p>
+        </div>
+      </div>
+      <div className="rounded-xl p-6 pt-6 mb-6 scroll-pb-60 border bg-card text-card-foreground">
+        <div className="flex flex-col mb-4 space-y-1.5">
+          <h2 className="font-semibold text-xl leading-none tracking-tight">
+            Upload Supporting Documents
+          </h2>
+        </div>
+        <div className="pt-0">
+          <div className="rounded-md border">
+            <div className="relative w-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/60">
+                    <TableHead>Document</TableHead>
+                    <TableHead>Selected file</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selecteditemrequireddocuments?.length > 0 && (
+                        [...new Set(selecteditemrequireddocuments)].map((docs, i) => {
+                          return (
+                            <TableRow key={i} className="bg-muted/60">
+                              <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                                {docs.RequiredDocumentDescription}
+                              </TableCell>
+                              <TableCell className="p-2 text-muted-foreground text-left [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                                {!docs?.UploadedFileName ? "No file selected" : <a target="_blank" href={docs?.UploadedFileData} download={docs?.UploadedFileName} className="underline cursor-pointer text-[#3B9EFF]">{truncateFilenameWithExtension(docs?.UploadedFileName, 20)}</a>}
+                              </TableCell>
+                              <TableCell className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                                <div className="flex">
+                                  <div className=" justify-start">
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center"
+                                        >
+                                          {docs?.UploadedFileName ? "Choose again" : "Upload"}
+                                          <span className="ml-2">
+                                            <svg
+                                              width="15"
+                                              height="15"
+                                              viewBox="0 0 15 15"
+                                              fill="none"
+                                              xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                              <path
+                                                d="M7.81825 1.18188C7.64251 1.00615 7.35759 1.00615 7.18185 1.18188L4.18185 4.18188C4.00611 4.35762 4.00611 4.64254 4.18185 4.81828C4.35759 4.99401 4.64251 4.99401 4.81825 4.81828L7.05005 2.58648V9.49996C7.05005 9.74849 7.25152 9.94996 7.50005 9.94996C7.74858 9.94996 7.95005 9.74849 7.95005 9.49996V2.58648L10.1819 4.81828C10.3576 4.99401 10.6425 4.99401 10.8182 4.81828C10.994 4.64254 10.994 4.35762 10.8182 4.18188L7.81825 1.18188ZM2.5 9.99997C2.77614 9.99997 3 10.2238 3 10.5V12C3 12.5538 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2238 12.2239 9.99997 12.5 9.99997C12.7761 9.99997 13 10.2238 13 10.5V12C13 13.104 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2238 2.22386 9.99997 2.5 9.99997Z"
+                                                fill="currentColor"
+                                                fillRule="evenodd"
+                                                clipRule="evenodd"
+                                              ></path>
+                                            </svg>
+                                          </span>
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="sm:max-w-md">
+                                        <DialogHeader>
+                                          <DialogTitle>
+                                            {docs.RequiredDocumentDescription}
+                                          </DialogTitle>
+                                          <DialogDescription>
+                                            please select the desired file and proceed
+                                            by clicking submit
+                                          </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="flex items-center space-x-2">
+                                          <div className="grid flex-1 gap-2">
+                                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                              <Input
+                                                ref={addfileref}
+                                                className="pt-[6px]"
+                                                type="file"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <DialogDescription className="file-warning-message hidden"></DialogDescription>
+                                        <DialogFooter className="sm:justify-start flex">
+                                          <Button
+                                            onClick={(el) => addfilefn(el, docs?.RequiredDocumentCode)}
+                                            type="button"
+                                            variant="secondary"
+                                          >
+                                            Submit
+                                          </Button>
+                                          <ShadcnCleverEarwig74Loader
+                                            strokewidth="5"
+                                            classess="ml-2 mt-2 hidden addfilefnrefloader"
+                                            width="20px"
+                                            height="20px"
+                                            stroke="#B4B4B4"
+                                          />
+                                        </DialogFooter>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                  )}
+                  {selecteditemrequireddocuments?.length <= 0 && (
+                    <TableRow className="bg-muted/60">
+                      <TableCell
+                        colSpan={3}
+                        className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3"
+                      >
+                        -
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       </div>
       <div className="rounded-xl p-6 mb-6 border bg-card text-card-foreground shadow">
+        <div className="grid gap-6"></div>
         <div className="mb-4">
           <div className="flex items-center justify-center relative [&>div]:w-full">
             <div className="grid gap-6">
-              <RadioGroup defaultValue="option-one" className="flex relative">
+              <RadioGroup onValueChange={(e) => studentdeliverymoderef.current = e} defaultValue="direct-delivery" className="flex relative">
                 <div className="flex items-center space-x-2 mr-2">
-                  <RadioGroupItem value="option-one" id="option-one" />
-                  <Label className="text-[18px]" htmlFor="option-one">
+                  <RadioGroupItem value="direct-delivery" id="direct-delivery" />
+                  <Label className="text-[18px]" htmlFor="direct-delivery">
                     Direct Delivery
+                    <span></span>
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="option-two" id="option-two" />
-                  <Label className="text-[18px]" htmlFor="option-two">
+                  <RadioGroupItem value="pickup" id="pickup" />
+                  <Label className="text-[18px]" htmlFor="pickup">
                     Pickup
                   </Label>
                 </div>
@@ -424,6 +814,7 @@ const ACRStudentRequest = () => {
                   Line address 1:
                 </label>
                 <Input
+                  ref={studentlineaddress1ref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   placeholder="--"
@@ -437,6 +828,7 @@ const ACRStudentRequest = () => {
                   Line address 2:
                 </label>
                 <Input
+                  ref={studentlineaddress2ref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   placeholder="--"
@@ -453,6 +845,7 @@ const ACRStudentRequest = () => {
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   placeholder="--"
+                  ref={studentmunicipalitycityref}
                 />
               </div>
               <div className="grid gap-2">
@@ -463,6 +856,7 @@ const ACRStudentRequest = () => {
                   Province:
                 </label>
                 <Input
+                  ref={studentprovinceref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   placeholder="--"
@@ -476,12 +870,15 @@ const ACRStudentRequest = () => {
                   >
                     Contry:
                   </label>
+                 
                   <Input
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     id="subject"
                     placeholder="--"
+                    ref={studentcountryref}
                   />
                 </div>
+                
                 <div className="grid gap-2 mb-4">
                   <label
                     className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -490,6 +887,7 @@ const ACRStudentRequest = () => {
                     Zip:
                   </label>
                   <Input
+                    ref={studentzipcoderef}
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     id="subject"
                     placeholder="--"
@@ -501,7 +899,7 @@ const ACRStudentRequest = () => {
         </div>{" "}
         <div className="flex">
           <div className=" justify-start">
-            <Button className="w-[120px] text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
+            <Button onClick={payrequest} className="w-[120px] text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
               Pay Request
             </Button>
           </div>

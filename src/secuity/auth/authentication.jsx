@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from "react";
 import { Outlet, useSearchParams } from "react-router-dom";
 import { browserName, browserVersion } from "react-device-detect";
-import { cryptoDecrypt, cryptoEncrypt, delay, getRandomNumber } from "../../helpers/all";
+import { cryptoEncrypt, delay, getRandomNumber } from "../../helpers/all";
 import { GlobalErrorContext } from "../../context/global-alert";
 import Cookies from "js-cookie";
 import useAxiosAPI from "../../hooks/axios-api";
@@ -101,22 +101,20 @@ export default function Authentication() {
   };
 
   const onload = async () => {
-    setglobalalert({error: true, body: <ShadcnCleverEarwig74Loader stroke="#fff" />});
-    await delay(getRandomNumber(300, 1500))
     if (hassession) {
-
+     
       setAuthenticated(true);
       setglobalalert({error: false});
       return;
     }
     if (hasurlsession) {
-
       verify();
       return;
     }
 
     setglobalalert({error: true, variant: "destructive", body: "Unauthorized access invalid login credentials."});
   }
+  
   useEffect(() => {
     onload()
   }, []);

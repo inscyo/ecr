@@ -34,11 +34,11 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PageTitleContext } from "../../../context/page-title";
 const ACRDashboard = () => {
-    const {settitle} = useContext(PageTitleContext);
+  const { settitle } = useContext(PageTitleContext);
 
-    useEffect(() => {
-      settitle("Dashboard");
-    }, []);
+  useEffect(() => {
+    settitle("Dashboard");
+  }, []);
   return (
     <>
       <Tabs defaultValue="student-request" className="w-full ">
@@ -159,7 +159,11 @@ const ACRDashboard = () => {
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl pb-4 pt-2 bg-card text-card-foreground">
+            </CardContent>
+          </Card>
+          <Card className="mt-6 pt-6">
+            <CardContent className="space-y-2">
+              <div className="rounded-xl bg-card text-card-foreground">
                 <div className=" flex-col mb-4 space-y-1.5">
                   <h2 className="font-semibold text-xl leading-none tracking-tight ">
                     Requested Documents
@@ -305,8 +309,12 @@ const ACRDashboard = () => {
                   </p>
                 </div>
               </div>
-              <div className="rounded-xl mb-6 scroll-pb-60 border-none bg-card text-card-foreground">
-                <div className="flex flex-col mb-4 mt-4 space-y-1.5">
+            </CardContent>
+          </Card>
+          <Card className="mt-6 pt-6">
+            <CardContent className="space-y-2">
+              <div className="rounded-xl  scroll-pb-60 border-none bg-card text-card-foreground">
+                <div className="flex flex-col mb-4 space-y-1.5">
                   <h2 className="font-semibold text-xl leading-none tracking-tight">
                     Uploading Supporting Documents
                   </h2>
@@ -413,7 +421,11 @@ const ACRDashboard = () => {
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl mb-6 pt-6 border-none bg-card text-card-foreground">
+            </CardContent>
+          </Card>
+          <Card className="mt-6 pt-6">
+            <CardContent className="space-y-2">
+              <div className="rounded-xl border-none bg-card text-card-foreground">
                 <div className="mb-4">
                   <div className="flex items-center justify-center relative [&>div]:w-full">
                     <div className="grid gap-6">
@@ -551,24 +563,24 @@ const ACRDashboard = () => {
                   </div>
                 </div>
                 <Button className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
-                Approve/Proceed
-                <span className="ml-2">
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 15 15"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z"
-                      fill="currentColor"
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                    ></path>
-                  </svg>
-                </span>
-              </Button>
+                  Approve/Proceed
+                  <span className="ml-2">
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 15 15"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z"
+                        fill="currentColor"
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                      ></path>
+                    </svg>
+                  </span>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -816,7 +828,6 @@ const ACRDashboard = () => {
                   </div>
                 </div>
               </div>
-
             </CardContent>
           </Card>
         </TabsContent>

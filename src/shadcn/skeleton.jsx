@@ -21,7 +21,7 @@ const ShadcnSkeleton = () => {
                 <Skeleton className="h-4 w-[200px]" />
                 <Skeleton className="h-4 w-[150px]" />``
             </div>
-        </div>
+        </div>1
        </>
     )
 }

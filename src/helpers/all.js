@@ -77,3 +77,24 @@ export const isWebcamAvailable = async (callback) => {
 export function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+export function formatNumberWithCommas(number) {
+  const numericValue = Number(number);
+  if (isNaN(numericValue)) {
+    return 'Invalid Input';
+  }
+  return numericValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+export function truncateFilenameWithExtension(filename, maxLength) {
+  if (filename.length <= maxLength) {
+    return filename;
+  }
+
+  const extensionIndex = filename.lastIndexOf('.');
+  const nameWithoutExtension = filename.substring(0, extensionIndex);
+  const truncatedName = nameWithoutExtension.substring(0, maxLength - 3) + '...';
+  const result = truncatedName + filename.substring(extensionIndex);
+
+  return result;
+}

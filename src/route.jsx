@@ -33,7 +33,7 @@ export default function AppRoutes(){
     */
     const jsx = (
         <>
-            {globalalert?.error && <ShadcnAlert body={globalalert?.body} /> }
+            {globalalert?.error && <ShadcnAlert textColor={globalalert?.color} body={globalalert?.body} /> }
             {/* {globalloadingprogress > 0 && <UiverseLoader progress={globalloadingprogress} progressfn={setgloballoadingprogress} color="#ffc53d" />} */}
             <BrowserRouter>
                 <Suspense>
