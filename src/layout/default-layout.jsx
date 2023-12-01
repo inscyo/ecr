@@ -5,9 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { replaceExceedingLetters } from "../helpers/string";
 import { useContext } from 'react';
 import { PageTitleContext } from '../context/page-title';
+import { GlobalErrorContext } from '../context/global-alert';
+import { Toaster } from "@/components/ui/toaster"
 
 export default function DefaultLayout(){
-    const { title } = useContext(PageTitleContext)
+    const { title } = useContext(PageTitleContext);
+    const { globalalert } = useContext(GlobalErrorContext)
     const { setTheme, theme } = useContext(PageTitleContext)
 
     return (
@@ -37,6 +40,7 @@ export default function DefaultLayout(){
                 </div>
             </div>
             <Outlet />
+            <Toaster />
         </div>
     )
 }

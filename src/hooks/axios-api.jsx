@@ -8,14 +8,12 @@ import { delay, getRandomNumber } from '../helpers/all';
 const useAxiosAPI = () => {
   const { setglobalalert } = useContext(GlobalErrorContext);
 
-  const fetchData = async (spname, fnparameter, body) => {
-    setglobalalert({error: true, body: <ShadcnCleverEarwig74Loader stroke="#fff" />});
+  const fetchData = async (spname, fnparameter, body, loader = true) => {
+    if(loader) setglobalalert({error: true, body: <ShadcnCleverEarwig74Loader stroke="#fff" />});
     try {
       const source = axios.CancelToken.source();
-      await delay(getRandomNumber(300, 1500));
       
       const { data: esignedData } = await api.post('/Free/SignedHash', body, { cancelToken: source.token });
-      await delay(getRandomNumber(300, 1500));
 
       if (!esignedData) {
         throw new Error('Error retrieving E-signed data.');
@@ -36,8 +34,8 @@ const useAxiosAPI = () => {
           cancelToken: source.token,
         }
       );
-      await delay(getRandomNumber(300, 1500));
-      setglobalalert({error: false});
+      await delay(getRandomNumber(300, 1000));
+      if(loader) setglobalalert({error: false});
       const responseData_i = response.data["objectData"] ?? response.data["ObjectData"];
 
       if (responseData_i.includes('"response":')) {

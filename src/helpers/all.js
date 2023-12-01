@@ -98,3 +98,36 @@ export function truncateFilenameWithExtension(filename, maxLength) {
 
   return result;
 }
+
+export function formatFileSize(fileSizeInBytes) {
+  const units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+  let size = fileSizeInBytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  return size.toFixed(2) + ' ' + units[unitIndex];
+}
+export const allowedExtensions = ['jpg', 'jpeg', 'webp', 'png', 'gif', 'bmp', 'tiff', 'doc', 'docx', 'pdf', 'txt', 'ppt', 'pptx', 'xls', 'xlsx']
+export function validateFileExtension(filename) {
+  const extensionMatch = /\.([a-z0-9]+)$/i.exec(filename);
+  return extensionMatch && allowedExtensions.includes(extensionMatch[1].toLowerCase());
+}
+export function isNullOrEmpty(value) {
+  return value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
+}
+
+export function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+export function isValidPhoneNumber(phoneNumber) {
+  // This regular expression allows for numbers with or without spaces, parentheses, and hyphens
+  const phoneRegex = /^0?\d{10}$/;
+  return phoneRegex.test(phoneNumber);
+}

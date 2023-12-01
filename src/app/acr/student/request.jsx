@@ -39,16 +39,25 @@ import { useEffect } from "react";
 import { GlobalErrorContext } from "../../../context/global-alert";
 import { ShadcnCleverEarwig74Loader } from "../../../layout/loaders";
 import {
+  allowedExtensions,
   cryptoEncrypt,
   delay,
+  formatFileSize,
   formatNumberWithCommas,
   truncateFilenameWithExtension,
+  validateFileExtension,
+  isNullOrEmpty,
+  isValidEmail,
+  isValidPhoneNumber,
+  getRandomNumber,
 } from "../../../helpers/all";
 import useAxiosAPI from "../../../hooks/axios-api";
 import { cryptoDecrypt } from "../../../helpers/all";
 import Cookies from "js-cookie";
 import { replaceExceedingLetters } from "../../../helpers/string";
 import { useMemo } from "react";
+import { ToastAction } from "@/components/ui/toast";
+import { useToast } from "@/components/ui/use-toast";
 
 const ACRStudentRequest = () => {
   const apiRequest = useAxiosAPI();
@@ -59,6 +68,8 @@ const ACRStudentRequest = () => {
   const [selectedrequestitem, setselectedrequestitem] = useState([]);
   const [selecteditemrequireddocuments, setselecteditemrequireddocuments] =
     useState([]);
+  const [studentprogramlist, setstudentprogramlist] = useState([]);
+  const { toast } = useToast();
 
   const {
     UserId: StudentID,
@@ -70,9 +81,14 @@ const ACRStudentRequest = () => {
   // refs
   const addfileref = useRef();
   const controlnumberref = useRef();
-  const itemaddedtotalamountref = useRef();
 
   const requestcontrolnumber = async () => {
+    const studentprogramresponse = await apiRequest(
+      "ACR_StudentProgramCodeList",
+      "JSON",
+      { StudentID: StudentID },
+    );
+    setstudentprogramlist(studentprogramresponse);
     const response = await apiRequest("ACR_RequestControlNumber", "", {});
     const controlnumber = response?.[0]?.GeneratedControlNumber;
     if (!controlnumber) {
@@ -88,8 +104,29 @@ const ACRStudentRequest = () => {
 
   const getrequestdocumentlist = async () => {
     const btn = document.querySelector(".open-request-item-selection");
-    if (availablerequestlist.length > 0) return btn?.click();
-    const response = await apiRequest("ACR_StudentRequestItems", "", {});
+    const requestdocumentsloader = document.querySelector(
+      ".request-documents-loader",
+    );
+    const requestdocumentsicon = document.querySelector(
+      ".request-documents-icon",
+    );
+    const requestdocumentsbtn = document.querySelector(
+      ".request-documents-btn",
+    );
+    requestdocumentsloader.style.display = "block";
+    requestdocumentsicon.style.display = "none";
+    requestdocumentsbtn.disabled = true;
+    requestdocumentsbtn.childNodes[0].innerText = "Please wait";
+    await delay(getRandomNumber(100, 1000));
+    if (availablerequestlist.length > 0) {
+      requestdocumentsloader.style.display = "none";
+      requestdocumentsicon.style.display = "block";
+      requestdocumentsbtn.disabled = false;
+      requestdocumentsbtn.childNodes[0].innerText = "Add Item";
+      return btn?.click();
+    }
+
+    const response = await apiRequest("ACR_StudentRequestItems", "", {}, false);
     if (!response || response.length <= 0) {
       setglobalalert({
         error: true,
@@ -98,12 +135,18 @@ const ACRStudentRequest = () => {
       });
       return;
     }
+
     setavailablerequestlist(
       response.map((d) => {
         d.hash = cryptoEncrypt(JSON.stringify(d));
         return d;
       }),
     );
+
+    requestdocumentsloader.style.display = "none";
+    requestdocumentsicon.style.display = "block";
+    requestdocumentsbtn.disabled = false;
+    requestdocumentsbtn.childNodes[0].innerText = "Add Item";
     btn?.click();
   };
 
@@ -126,6 +169,7 @@ const ACRStudentRequest = () => {
 
       if (!availablerequestliststring.includes(requesteditem)) {
         warning.style.display = "block";
+        warning.style.color = "#E54D2E";
         warning.innerText = "Something went wrong please try again";
         return;
       }
@@ -150,6 +194,7 @@ const ACRStudentRequest = () => {
         "ACR_RequestItemCodeRequiredDocuments",
         "Json",
         { ItemCode },
+        false,
       );
 
       if (requireddocumentsresponse?.length > 0)
@@ -189,6 +234,7 @@ const ACRStudentRequest = () => {
       warning.style.color = "#33B074";
     } catch (err) {
       warning.style.display = "block";
+      warning.style.color = "#E54D2E";
       warning.innerText = "Something went wrong please try again";
     }
   };
@@ -221,6 +267,28 @@ const ACRStudentRequest = () => {
       return;
     }
 
+    if (!validateFileExtension(file?.name)) {
+      currentref.style.cursor = "pointer";
+      btn.style.cursor = "pointer";
+      currentref.disabled = false;
+      btn.disabled = false;
+      loader.style.display = "none";
+      warning.style.display = "block";
+      warning.innerText = `file selected is not valid`;
+      return;
+    }
+
+    if (file?.size > 104857600) {
+      currentref.style.cursor = "pointer";
+      btn.style.cursor = "pointer";
+      currentref.disabled = false;
+      btn.disabled = false;
+      loader.style.display = "none";
+      warning.style.display = "block";
+      warning.innerText = `file is to large (${formatFileSize(file?.size)})`;
+      return;
+    }
+
     const readFile = (f) => {
       return new Promise((resolve) => {
         try {
@@ -243,14 +311,14 @@ const ACRStudentRequest = () => {
     };
 
     const readedFile = await readFile(file);
-    setselecteditemrequireddocuments(p => {
-      return p.map(docs => {
-        if(docs.RequiredDocumentCode === documentcode){
+    setselecteditemrequireddocuments((p) => {
+      return p.map((docs) => {
+        if (docs.RequiredDocumentCode === documentcode) {
           docs.UploadedFileName = readedFile?.name;
           docs.UploadedFileData = readedFile?.file;
         }
         return docs;
-      })
+      });
     });
     addfileref.current.value = "";
     currentref.style.cursor = "pointer";
@@ -258,9 +326,9 @@ const ACRStudentRequest = () => {
     currentref.disabled = false;
     btn.disabled = false;
     loader.style.display = "none";
-    warning.innerText = "File added successfully";
     warning.style.display = "block";
     warning.style.color = "#33B074";
+    warning.innerText = "File added successfully";
   };
 
   const calculatetotalunitprice = ({ target }, item, itemelement) => {
@@ -302,8 +370,10 @@ const ACRStudentRequest = () => {
     setselectedrequestitem((requestitems) =>
       requestitems.filter((item) => item.ItemCode != itemcode),
     );
-    if(selecteditemrequireddocuments?.length <= 0) return;
-    setselecteditemrequireddocuments(p => p.filter(docs => docs?.ItemCode != itemcode));
+    if (selecteditemrequireddocuments?.length <= 0) return;
+    setselecteditemrequireddocuments((p) =>
+      p.filter((docs) => docs?.ItemCode != itemcode),
+    );
   };
 
   const requestitemtotalamount = useMemo(() => {
@@ -325,12 +395,13 @@ const ACRStudentRequest = () => {
   const studentcountryref = useRef();
   const studentzipcoderef = useRef();
 
-  const payrequest = () => {
+  const payrequest = async () => {
     const program = document.querySelector(".program-selected")?.innerText;
     const studentemail = studentemailref.current?.value;
     const studentcontact = studentcontactref.current?.value;
     const studentpurpose = studentpurposeref.current?.value;
-    const studentdeliverymode = studentdeliverymoderef.current || "direct-delivery";
+    const studentdeliverymode =
+      studentdeliverymoderef.current || "direct-delivery";
     const studentlineaddress1 = studentlineaddress1ref.current?.value;
     const studentlineaddress2 = studentlineaddress2ref.current?.value;
     const studentprovince = studentprovinceref.current?.value;
@@ -338,7 +409,111 @@ const ACRStudentRequest = () => {
     const studentcountry = studentcountryref.current?.value;
     const studentzipcode = studentzipcoderef.current?.value;
 
-  }
+    const validations = [
+      {
+        field: StudentID,
+        message:
+          "Please ensure you have entered the student ID. This field is required for accurate identification of the student.",
+      },
+      {
+        field: controlnumberref.current,
+        message:
+          "The control number is a mandatory field. Kindly input the assigned control number for proper record-keeping.",
+      },
+      {
+        field: program,
+        message:
+          "To proceed, please choose a program from the available options. This information helps us tailor our services to meet your specific academic needs.",
+      },
+      {
+        field: studentemail,
+        message:
+          "Ensure the email address provided is valid. A valid email is crucial for communication purposes. If unsure, double-check and confirm your email address.",
+        isValid: isValidEmail,
+      },
+      {
+        field: studentcontact,
+        message:
+          "Please enter a valid contact number. This ensures that we can reach you promptly if needed. Check for correct formatting and avoid any additional characters.",
+        isValid: isValidPhoneNumber,
+      },
+      // { field: studentpurpose, message: 'Specify the purpose of your request. Providing a clear purpose helps us understand your needs better and allows for a smoother process.' },
+      {
+        field: studentdeliverymode,
+        message:
+          "Choose a preferred delivery mode for your request. This selection ensures that we can fulfill your request in the most convenient way for you.",
+      },
+      {
+        field: studentlineaddress1,
+        message:
+          "Input your primary line address. This information is vital for the accurate delivery of any physical materials or documents.",
+      },
+      // { field: studentlineaddress2, message: 'If applicable, provide a secondary line address. This additional information assists us in case of any complexities in the delivery process.' },
+      {
+        field: studentprovince,
+        message:
+          "Select the province where you are currently located. This information aids us in understanding your geographical location for various logistical purposes.",
+      },
+      {
+        field: studentmunicipalitycity,
+        message:
+          "Enter the municipality or city of your residence. This data is necessary for administrative purposes and ensuring accurate service delivery.",
+      },
+      {
+        field: studentcountry,
+        message:
+          "Choose your country of residence. This information is essential for processing requests based on regional considerations and requirements.",
+      },
+      {
+        field: studentzipcode,
+        message:
+          "Provide the zip code of your location. This detail helps in streamlining the delivery process and ensures accuracy in the handling of your request.",
+      },
+    ];
+
+    for (const { field, message, isValid } of validations) {
+      if (isNullOrEmpty(field) || (isValid && !isValid(field))) {
+        toast({
+          title: "Required fields",
+          description: message,
+        });
+        return;
+      }
+    }
+
+    if (selectedrequestitem?.length <= 0) {
+      toast({
+        title: "Request Document",
+        description: "Request atleast one document.",
+      });
+      return;
+    }
+
+    if (
+      selecteditemrequireddocuments?.length > 0 &&
+      !selecteditemrequireddocuments.every(
+        (obj) => obj.UploadedFileData || obj.UploadedFileName,
+      )
+    ) {
+      toast({
+        title: "Supporting Documents",
+        description: "Please upload supporting documents",
+      });
+      return;
+    }
+
+    const btn = document.querySelector(".submit-requested-documents-btn");
+    const loader = document.querySelector(".submit-requested-documents-loader");
+    const cancel = document.querySelector(".cancel-requested-documents");
+    loader.style.display = "block";
+    cancel.style.display = "none";
+    btn.disabled = true;
+
+    await delay(5000);
+    loader.style.display = "none";
+    cancel.style.display = "block";
+    btn.disabled = false;
+  };
 
   useEffect(() => {
     settitle("Student Request");
@@ -350,7 +525,7 @@ const ACRStudentRequest = () => {
       <div className="items-start justify-center w-full gap-6 rounded-lg sm:block mb-6">
         <div className="rounded-xl border bg-card text-card-foreground shadow">
           {/* <p className="text-md text-muted-foreground">What area are you having problems with?</p> */}
-          <div className="p-6  gap-6">
+          <div className="p-6 bg-muted/60 gap-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2 mb-4">
                 <label
@@ -379,11 +554,21 @@ const ACRStudentRequest = () => {
                     <SelectValue placeholder="--" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="apple">Apple <span className="hidden program-selected">apple</span></SelectItem>
-                    <SelectItem value="banana">Banana <span className="hidden program-selected">banana</span></SelectItem>
-                    <SelectItem value="blueberry">Blueberry <span className="hidden program-selected">blueberry</span></SelectItem>
-                    <SelectItem value="grapes">Grapes <span className="hidden program-selected">grapes</span></SelectItem>
-                    <SelectItem value="pineapple">Pineapple <span className="hidden program-selected">pineapple</span></SelectItem>
+                    {studentprogramlist?.length > 0 &&
+                      studentprogramlist.map((program, i) => (
+                        <SelectItem key={i} value={program.SYTProgramCode}>
+                          {program.DisplayName}{" "}
+                          <span className="hidden program-selected">
+                            {program.SYTProgramCode}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    {studentprogramlist?.length <= 0 && (
+                      <SelectItem value="-">
+                        No available program{" "}
+                        <span className="hidden program-selected">-</span>
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -432,6 +617,7 @@ const ACRStudentRequest = () => {
                   ref={studentemailref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
+                  defaultValue={"sample@gmail.com"}
                   placeholder="--"
                 />
               </div>
@@ -446,6 +632,7 @@ const ACRStudentRequest = () => {
                   ref={studentcontactref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
+                  defaultValue={"09123456789"}
                   placeholder="--"
                 />
               </div>
@@ -468,7 +655,7 @@ const ACRStudentRequest = () => {
           </div>
         </div>
       </div>
-      <div className="rounded-xl border mb-6 p-6 bg-card text-card-foreground">
+      <div className="rounded-xl bg-muted/60 border mb-6 p-6 text-card-foreground">
         <div className=" flex-col mb-4 space-y-1.5">
           <h2 className="font-semibold text-xl leading-none tracking-tight ">
             Requested Documents
@@ -479,7 +666,7 @@ const ACRStudentRequest = () => {
             <div className="relative w-full overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/60">
+                  <TableRow>
                     <TableHead>Document Type</TableHead>
                     <TableHead>QTY</TableHead>
                     <TableHead>Unit Price</TableHead>
@@ -586,10 +773,17 @@ const ACRStudentRequest = () => {
           <div className=" justify-start">
             <Button
               onClick={getrequestdocumentlist}
-              className="w-auto disabled text-[#fff] rounded-sm bg-[#104D87] hover:bg-[#104D87] mt-[10px] text-center"
+              className="w-auto request-documents-btn disabled text-[#fff] rounded-sm bg-[#104D87] hover:bg-[#104D87] mt-[10px] text-center"
             >
-              Add Item
-              <span className="ml-2">
+              <span>Add Item</span>
+              <ShadcnCleverEarwig74Loader
+                strokewidth="5"
+                classess="ml-[10px] mt-[2px] hidden request-documents-loader"
+                width="15px"
+                height="15px"
+                stroke="#dfdfdf"
+              />
+              <span className="ml-2 request-documents-icon">
                 <svg
                   width="15"
                   height="15"
@@ -667,7 +861,7 @@ const ACRStudentRequest = () => {
           </p>
         </div>
       </div>
-      <div className="rounded-xl p-6 pt-6 mb-6 scroll-pb-60 border bg-card text-card-foreground">
+      <div className="rounded-xl bg-muted/60 p-6 pt-6 mb-6 scroll-pb-60 border text-card-foreground">
         <div className="flex flex-col mb-4 space-y-1.5">
           <h2 className="font-semibold text-xl leading-none tracking-tight">
             Upload Supporting Documents
@@ -685,91 +879,119 @@ const ACRStudentRequest = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selecteditemrequireddocuments?.length > 0 && (
-                        [...new Set(selecteditemrequireddocuments)].map((docs, i) => {
-                          return (
-                            <TableRow key={i} className="bg-muted/60">
-                              <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                                {docs.RequiredDocumentDescription}
-                              </TableCell>
-                              <TableCell className="p-2 text-muted-foreground text-left [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                                {!docs?.UploadedFileName ? "No file selected" : <a target="_blank" href={docs?.UploadedFileData} download={docs?.UploadedFileName} className="underline cursor-pointer text-[#3B9EFF]">{truncateFilenameWithExtension(docs?.UploadedFileName, 20)}</a>}
-                              </TableCell>
-                              <TableCell className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                                <div className="flex">
-                                  <div className=" justify-start">
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center"
-                                        >
-                                          {docs?.UploadedFileName ? "Choose again" : "Upload"}
-                                          <span className="ml-2">
-                                            <svg
-                                              width="15"
-                                              height="15"
-                                              viewBox="0 0 15 15"
-                                              fill="none"
-                                              xmlns="http://www.w3.org/2000/svg"
-                                            >
-                                              <path
-                                                d="M7.81825 1.18188C7.64251 1.00615 7.35759 1.00615 7.18185 1.18188L4.18185 4.18188C4.00611 4.35762 4.00611 4.64254 4.18185 4.81828C4.35759 4.99401 4.64251 4.99401 4.81825 4.81828L7.05005 2.58648V9.49996C7.05005 9.74849 7.25152 9.94996 7.50005 9.94996C7.74858 9.94996 7.95005 9.74849 7.95005 9.49996V2.58648L10.1819 4.81828C10.3576 4.99401 10.6425 4.99401 10.8182 4.81828C10.994 4.64254 10.994 4.35762 10.8182 4.18188L7.81825 1.18188ZM2.5 9.99997C2.77614 9.99997 3 10.2238 3 10.5V12C3 12.5538 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2238 12.2239 9.99997 12.5 9.99997C12.7761 9.99997 13 10.2238 13 10.5V12C13 13.104 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2238 2.22386 9.99997 2.5 9.99997Z"
-                                                fill="currentColor"
-                                                fillRule="evenodd"
-                                                clipRule="evenodd"
-                                              ></path>
-                                            </svg>
+                  {selecteditemrequireddocuments?.length > 0 &&
+                    [...new Set(selecteditemrequireddocuments)].map(
+                      (docs, i) => {
+                        return (
+                          <TableRow key={i} className="bg-muted/60">
+                            <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                              {docs.RequiredDocumentDescription}
+                            </TableCell>
+                            <TableCell className="p-2 text-muted-foreground text-left [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                              {!docs?.UploadedFileName ? (
+                                "No file selected"
+                              ) : (
+                                <a
+                                  target="_blank"
+                                  href={docs?.UploadedFileData}
+                                  download={docs?.UploadedFileName}
+                                  className="underline cursor-pointer text-[#3B9EFF]"
+                                >
+                                  {truncateFilenameWithExtension(
+                                    docs?.UploadedFileName,
+                                    20,
+                                  )}
+                                </a>
+                              )}
+                            </TableCell>
+                            <TableCell className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                              <div className="flex">
+                                <div className=" justify-start">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center"
+                                      >
+                                        {docs?.UploadedFileName
+                                          ? "Choose again"
+                                          : "Upload"}
+                                        <span className="ml-2">
+                                          <svg
+                                            width="15"
+                                            height="15"
+                                            viewBox="0 0 15 15"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                          >
+                                            <path
+                                              d="M7.81825 1.18188C7.64251 1.00615 7.35759 1.00615 7.18185 1.18188L4.18185 4.18188C4.00611 4.35762 4.00611 4.64254 4.18185 4.81828C4.35759 4.99401 4.64251 4.99401 4.81825 4.81828L7.05005 2.58648V9.49996C7.05005 9.74849 7.25152 9.94996 7.50005 9.94996C7.74858 9.94996 7.95005 9.74849 7.95005 9.49996V2.58648L10.1819 4.81828C10.3576 4.99401 10.6425 4.99401 10.8182 4.81828C10.994 4.64254 10.994 4.35762 10.8182 4.18188L7.81825 1.18188ZM2.5 9.99997C2.77614 9.99997 3 10.2238 3 10.5V12C3 12.5538 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2238 12.2239 9.99997 12.5 9.99997C12.7761 9.99997 13 10.2238 13 10.5V12C13 13.104 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2238 2.22386 9.99997 2.5 9.99997Z"
+                                              fill="currentColor"
+                                              fillRule="evenodd"
+                                              clipRule="evenodd"
+                                            ></path>
+                                          </svg>
+                                        </span>
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-md">
+                                      <DialogHeader>
+                                        <DialogTitle>
+                                          {docs.RequiredDocumentDescription}
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                          please select the desired file and
+                                          proceed by clicking submit
+                                          <span className="mt-5 mb-2 inline-block w-full">
+                                            allowed file types:{" "}
                                           </span>
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="sm:max-w-md">
-                                        <DialogHeader>
-                                          <DialogTitle>
-                                            {docs.RequiredDocumentDescription}
-                                          </DialogTitle>
-                                          <DialogDescription>
-                                            please select the desired file and proceed
-                                            by clicking submit
-                                          </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="flex items-center space-x-2">
-                                          <div className="grid flex-1 gap-2">
-                                            <div className="grid w-full max-w-sm items-center gap-1.5">
-                                              <Input
-                                                ref={addfileref}
-                                                className="pt-[6px]"
-                                                type="file"
-                                              />
-                                            </div>
+                                          <span className="text-[#33B074]">
+                                            {allowedExtensions.join(", ")}
+                                          </span>
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="flex items-center space-x-2">
+                                        <div className="grid flex-1 gap-2">
+                                          <div className="grid w-full max-w-sm items-center gap-1.5">
+                                            <Input
+                                              ref={addfileref}
+                                              className="pt-[6px]"
+                                              type="file"
+                                            />
                                           </div>
                                         </div>
-                                        <DialogDescription className="file-warning-message hidden"></DialogDescription>
-                                        <DialogFooter className="sm:justify-start flex">
-                                          <Button
-                                            onClick={(el) => addfilefn(el, docs?.RequiredDocumentCode)}
-                                            type="button"
-                                            variant="secondary"
-                                          >
-                                            Submit
-                                          </Button>
-                                          <ShadcnCleverEarwig74Loader
-                                            strokewidth="5"
-                                            classess="ml-2 mt-2 hidden addfilefnrefloader"
-                                            width="20px"
-                                            height="20px"
-                                            stroke="#B4B4B4"
-                                          />
-                                        </DialogFooter>
-                                      </DialogContent>
-                                    </Dialog>
-                                  </div>
+                                      </div>
+                                      <DialogDescription className="file-warning-message hidden lowercase"></DialogDescription>
+                                      <DialogFooter className="sm:justify-start flex">
+                                        <Button
+                                          onClick={(el) =>
+                                            addfilefn(
+                                              el,
+                                              docs?.RequiredDocumentCode,
+                                            )
+                                          }
+                                          type="button"
+                                          variant="secondary"
+                                        >
+                                          Submit
+                                        </Button>
+                                        <ShadcnCleverEarwig74Loader
+                                          strokewidth="5"
+                                          classess="ml-2 mt-2 hidden addfilefnrefloader"
+                                          width="20px"
+                                          height="20px"
+                                          stroke="#B4B4B4"
+                                        />
+                                      </DialogFooter>
+                                    </DialogContent>
+                                  </Dialog>
                                 </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                  )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      },
+                    )}
                   {selecteditemrequireddocuments?.length <= 0 && (
                     <TableRow className="bg-muted/60">
                       <TableCell
@@ -786,14 +1008,21 @@ const ACRStudentRequest = () => {
           </div>
         </div>
       </div>
-      <div className="rounded-xl p-6 mb-6 border bg-card text-card-foreground shadow">
+      <div className="rounded-xl bg-muted/60 p-6 mb-6 border text-card-foreground shadow">
         <div className="grid gap-6"></div>
         <div className="mb-4">
           <div className="flex items-center justify-center relative [&>div]:w-full">
             <div className="grid gap-6">
-              <RadioGroup onValueChange={(e) => studentdeliverymoderef.current = e} defaultValue="direct-delivery" className="flex relative">
+              <RadioGroup
+                onValueChange={(e) => (studentdeliverymoderef.current = e)}
+                defaultValue="direct-delivery"
+                className="flex relative"
+              >
                 <div className="flex items-center space-x-2 mr-2">
-                  <RadioGroupItem value="direct-delivery" id="direct-delivery" />
+                  <RadioGroupItem
+                    value="direct-delivery"
+                    id="direct-delivery"
+                  />
                   <Label className="text-[18px]" htmlFor="direct-delivery">
                     Direct Delivery
                     <span></span>
@@ -817,6 +1046,7 @@ const ACRStudentRequest = () => {
                   ref={studentlineaddress1ref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
+                  defaultValue={"Commonwealth Ever"}
                   placeholder="--"
                 />
               </div>
@@ -845,6 +1075,7 @@ const ACRStudentRequest = () => {
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   placeholder="--"
+                  defaultValue={"Quezon City"}
                   ref={studentmunicipalitycityref}
                 />
               </div>
@@ -859,6 +1090,7 @@ const ACRStudentRequest = () => {
                   ref={studentprovinceref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
+                  defaultValue={"NCR"}
                   placeholder="--"
                 />
               </div>
@@ -870,15 +1102,16 @@ const ACRStudentRequest = () => {
                   >
                     Contry:
                   </label>
-                 
+
                   <Input
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     id="subject"
                     placeholder="--"
+                    defaultValue={"Philippines"}
                     ref={studentcountryref}
                   />
                 </div>
-                
+
                 <div className="grid gap-2 mb-4">
                   <label
                     className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -890,6 +1123,7 @@ const ACRStudentRequest = () => {
                     ref={studentzipcoderef}
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     id="subject"
+                    defaultValue={"1144"}
                     placeholder="--"
                   />
                 </div>
@@ -899,9 +1133,48 @@ const ACRStudentRequest = () => {
         </div>{" "}
         <div className="flex">
           <div className=" justify-start">
-            <Button onClick={payrequest} className="w-[120px] text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
-              Pay Request
-            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-[120px] text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
+                  Pay Request
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Are you sure you want to continue?</DialogTitle>
+                  <DialogDescription>
+                    Please check all required field before submiting
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogDescription className="request-item-warning hidden"></DialogDescription>
+                <DialogFooter className="sm:justify-start flex">
+                  <Button
+                    onClick={payrequest}
+                    type="button"
+                    variant="secondary"
+                    className="submit-requested-documents-btn"
+                  >
+                    Submit
+                  </Button>
+                  <ShadcnCleverEarwig74Loader
+                    strokewidth="5"
+                    classess="ml-2 mt-2 hidden submit-requested-documents-loader"
+                    width="20px"
+                    height="20px"
+                    stroke="#B4B4B4"
+                  />
+                  <DialogClose>
+                    <Button
+                      className="cancel-requested-documents"
+                      type="button"
+                      variant="secondary"
+                    >
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>{" "}
