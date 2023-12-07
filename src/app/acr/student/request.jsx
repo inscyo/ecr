@@ -12,12 +12,13 @@ import { PageTitleContext } from "../../../context/page-title";
 import { useEffect } from "react";
 import { GlobalErrorContext } from "../../../context/global-alert";
 import { ShadcnCleverEarwig74Loader } from "../../../layout/loaders";
-import { allowedExtensions, cryptoEncrypt, delay, formatFileSize, formatNumberWithCommas, truncateFilenameWithExtension, validateFileExtension, isNullOrEmpty, isValidEmail, isValidPhoneNumber, getRandomNumber } from "../../../helpers/all";
+import { allowedExtensions, cryptoEncrypt, delay, formatFileSize, formatNumberWithCommas, truncateFilenameWithExtension, validateFileExtension, isNullOrEmpty, isValidEmail, isValidPhoneNumber, getRandomNumber, isNullOrEmptyOrWhitespace } from "../../../helpers/all";
 import useAxiosAPI from "../../../hooks/axios-api";
 import { cryptoDecrypt } from "../../../helpers/all";
 import Cookies from "js-cookie";
 import { useMemo } from "react";
 import { Box } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const ACRStudentRequest = () => {
   const apiRequest = useAxiosAPI();
@@ -27,6 +28,7 @@ const ACRStudentRequest = () => {
   const [selectedrequestitem, setselectedrequestitem] = useState([]);
   const [selecteditemrequireddocuments, setselecteditemrequireddocuments] = useState([]);
   const [studentprogramlist, setstudentprogramlist] = useState([]);
+  const [availablepayments, setavailablepayments] = useState([]);
 
   const { UserId: StudentID, FirstName, MiddleName, LastName } = JSON.parse(cryptoDecrypt(Cookies.get("user")));
 
@@ -34,8 +36,17 @@ const ACRStudentRequest = () => {
   const controlnumberref = useRef();
 
   const requestcontrolnumber = async () => {
+    const paymentsresponse = await apiRequest("ACR_GetAvailablePaymentChannels", "", {});
+    if (!paymentsresponse || paymentsresponse.length <= 0) {
+      setglobalalert({
+        error: true,
+        variant: "destructive",
+        body: "Something went wrong please reload the page.",
+      });
+      return;
+    }
+
     const studentprogramresponse = await apiRequest("ACR_StudentProgramCodeList", "JSON", { StudentID: StudentID });
-    setstudentprogramlist(studentprogramresponse);
     const response = await apiRequest("ACR_RequestControlNumber", "", {});
     const controlnumber = response?.[0]?.GeneratedControlNumber;
     if (!controlnumber) {
@@ -47,6 +58,12 @@ const ACRStudentRequest = () => {
       return;
     }
     controlnumberref.current = controlnumber;
+    setstudentprogramlist(studentprogramresponse);
+    setavailablepayments(
+      paymentsresponse.map((d) => {
+        d.hash = cryptoEncrypt(JSON.stringify(d));
+        return d;
+    }));
   };
 
   const getrequestdocumentlist = async () => {
@@ -121,7 +138,6 @@ const ACRStudentRequest = () => {
         return;
       }
       const requireddocumentsresponse = await apiRequest("ACR_RequestItemCodeRequiredDocuments", "Json", { ItemCode });
-
       if (requireddocumentsresponse?.length > 0)
         setselecteditemrequireddocuments((p) => [
           ...p,
@@ -146,7 +162,7 @@ const ACRStudentRequest = () => {
           MaxAmount,
           DeliveryFee,
           Quantity: 1,
-          TotalAmount: ItemPrice + DeliveryFee,
+          TotalAmount: ItemPrice// + DeliveryFee,
         },
       ]);
       warning.innerText = "Item added successfully";
@@ -159,7 +175,7 @@ const ACRStudentRequest = () => {
     }
   };
 
-  const addfilefn = async (el, documentcode) => {
+  const addfilefn = async (el, itemcode, documentcode) => {
     const btn = el.target;
     const currentref = addfileref.current;
     const file = currentref.files[0];
@@ -233,7 +249,7 @@ const ACRStudentRequest = () => {
     const readedFile = await readFile(file);
     setselecteditemrequireddocuments((p) => {
       return p.map((docs) => {
-        if (docs.RequiredDocumentCode === documentcode) {
+        if (docs.RequiredDocumentCode === documentcode && docs?.ItemCode === itemcode) {
           docs.UploadedFileName = readedFile?.name;
           docs.UploadedFileData = readedFile?.file;
         }
@@ -271,13 +287,13 @@ const ACRStudentRequest = () => {
     }
 
     const finalamount = totalamount;
-    el.innerText = formatNumberWithCommas(finalamount + item?.DeliveryFee);
+    el.innerText = formatNumberWithCommas(finalamount );//+ item?.DeliveryFee
     if (item?.ItemPrice == item?.MaxAmount || finalamount == item?.MaxAmount) return;
     setselectedrequestitem((requestitems) => {
       return requestitems.map((items) => {
         if (items.ItemCode == item.ItemCode) {
           items.Quantity = value;
-          items.TotalAmount = finalamount + item?.DeliveryFee;
+          items.TotalAmount = finalamount ;//+ item?.DeliveryFee
         }
         return items;
       });
@@ -327,6 +343,8 @@ const ACRStudentRequest = () => {
       const studentmunicipalitycity = studentmunicipalitycityref.current?.value;
       const studentcountry = studentcountryref.current?.value;
       const studentzipcode = studentzipcoderef.current?.value;
+      const paymentchannel = document.querySelector(".paymentchannel-selected")?.innerText;
+      
       submitrequestwarning.style.display = "none";
       submitrequestwarning.style.color = "#FFA057";
       submitrequestwarning.innerText = "";
@@ -380,15 +398,22 @@ const ACRStudentRequest = () => {
           field: studentzipcode,
           message: "Provide the zip code of your location. This detail helps in streamlining the delivery process and ensures accuracy in the handling of your request.",
         },
+        {
+          field: paymentchannel,
+          message: "Kindly choose a payment channel.",
+          hidesubmit: false,
+        },
       ];
 
-      for (const { field, message, isValid } of validations) {
+      for (const { field, message, isValid, hidesubmit } of validations) {
         if (isNullOrEmpty(field) || (isValid && !isValid(field))) {
           submitrequestwarning.style.display = "block";
-          btn.style.display = "none";
           submitrequestwarning.innerText = message;
-          cancel.innerText = "Ok";
-          cancel.style.marginLeft = "-8px";
+          if(hidesubmit && !hidesubmit){
+            btn.style.display = "none";
+            cancel.innerText = "Ok";
+            cancel.style.marginLeft = "-8px";
+          }
           return;
         }
       }
@@ -402,7 +427,27 @@ const ACRStudentRequest = () => {
         return;
       }
 
-      if (selecteditemrequireddocuments?.length > 0 && !selecteditemrequireddocuments.every((obj) => obj.UploadedFileData || obj.UploadedFileName)) {
+      const validatesupportingdocuments = () => {
+        return new Promise(resolve => {
+          if (selecteditemrequireddocuments?.length > 0) {
+            !selecteditemrequireddocuments.map((obj) => {
+              if(obj.Required >= 1){
+                if(!obj.UploadedFileData || !obj.UploadedFileName){
+                  resolve(false);
+                  return 
+                }
+                return
+              }
+              resolve(true);
+            })
+            return
+          }
+          resolve(true)
+        })
+      }
+
+      const istruevalidatesupportingdocuments = await validatesupportingdocuments();
+      if(!istruevalidatesupportingdocuments){
         submitrequestwarning.style.display = "block";
         btn.style.display = "none";
         submitrequestwarning.innerText = "Please upload supporting documents";
@@ -415,13 +460,6 @@ const ACRStudentRequest = () => {
       loader.style.display = "block";
       cancel.style.display = "none";
       btn.disabled = true;
-
-      // btn.style.display = "none";
-      // cancel.innerText = "Go to my request dashboard";
-      // cancel.addEventListener("click", function(){
-      //   window.location.reload();
-      // });
-      // cancel.style.marginLeft = "-8px";
 
       const requestinfo = {
         ControlNumber: controlnumberref.current,
@@ -437,27 +475,19 @@ const ACRStudentRequest = () => {
         Municipality: studentmunicipalitycity,
         Country: studentcountry,
         ZipCode: studentzipcode,
-        RequestedItems: selectedrequestitem.map((obj) => {
-          delete obj.DeliveryFee;
-          delete obj.ItemDesc;
-          delete obj.ItemPrice;
-          delete obj.MaxAmount;
-          delete obj.MinAmount;
-          return obj;
-        }),
-        RequiredDocuments: selecteditemrequireddocuments.map((obj, i) => {
-          delete obj.ID;
-          delete obj.Required;
-          delete obj.RequiredDocumentDescription;
-          return obj;
-        }),
+        PaymentChannel: paymentchannel,
+        RequestedItems: selectedrequestitem,
+        RequiredDocuments: selecteditemrequireddocuments,
       };
 
-      console.log(requestinfo);
-      const submitrequestresponse = await apiRequest("ACR_SaveStudentRequest", "Json", requestinfo, false);
+      const stringifyrequestinfo = requestinfo;
+      console.log(stringifyrequestinfo);
+      const submitrequestresponse = await apiRequest("ACR_SaveStudentRequest", "Json", stringifyrequestinfo, false);
       let responsemessage = "";
+      let request = undefined;
       for (let i = submitrequestresponse.length; i--; ) {
-        const { responsecode, responsemessage: message } = submitrequestresponse[i];
+        const { responsecode, responsemessage: message, Request } = submitrequestresponse[i];
+        request = Request;
         responsemessage = message;
         if (responsecode == "1") {
           loader.style.display = "none";
@@ -469,6 +499,18 @@ const ACRStudentRequest = () => {
           return;
         }
       }
+      await delay(3000);
+      if(!request){
+        loader.style.display = "none";
+        cancel.style.display = "block";
+        btn.disabled = false;
+        submitrequestwarning.style.display = "block";
+        submitrequestwarning.innerText = "Something went wrong, please try again.";
+        btn.innerText = "Submit";
+        return
+      }
+      console.log("open")
+      window.open(`https://dcapi.amasystem.net:4445?payload=${request}`, '_blank');
 
       loader.style.display = "none";
       cancel.style.display = "block";
@@ -485,7 +527,6 @@ const ACRStudentRequest = () => {
       });
 
     } catch (err) {
-      console.log(err);
       loader.style.display = "none";
       cancel.style.display = "block";
       btn.disabled = false;
@@ -528,17 +569,19 @@ const ACRStudentRequest = () => {
                     <SelectValue placeholder="--" />
                   </SelectTrigger>
                   <SelectContent>
-                    {studentprogramlist?.length > 0 &&
-                      studentprogramlist.map((program, i) => (
-                        <SelectItem key={i} value={program.SYTProgramCode}>
-                          {program.DisplayName} <span className="hidden program-selected">{program.SYTProgramCode}</span>
+                    <ScrollArea className="h-auto" style={{maxHeight: "15em"}}>
+                      {studentprogramlist?.length > 0 &&
+                        studentprogramlist.map((program, i) => (
+                          <SelectItem key={i} value={program.SYTProgramCode}>
+                            {program.DisplayName} <span className="hidden program-selected">{program.SYTProgramCode}</span>
+                          </SelectItem>
+                        ))}
+                      {studentprogramlist?.length <= 0 && (
+                        <SelectItem value="-">
+                          No available program <span className="hidden program-selected">-</span>
                         </SelectItem>
-                      ))}
-                    {studentprogramlist?.length <= 0 && (
-                      <SelectItem value="-">
-                        No available program <span className="hidden program-selected">-</span>
-                      </SelectItem>
-                    )}
+                      )}
+                    </ScrollArea>
                   </SelectContent>
                 </Select>
               </div>
@@ -613,9 +656,12 @@ const ACRStudentRequest = () => {
           <h2 className="font-semibold text-xl leading-none tracking-tight ">Requested Documents</h2>
         </div>
         <div className="pt-0">
+          
           <div className="rounded-md border">
+            
             <div className="relative w-full overflow-auto">
-              <Table>
+           
+              <Table className="width-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Document Type</TableHead>
@@ -627,8 +673,22 @@ const ACRStudentRequest = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {console.log(selectedrequestitem)}
                   {selectedrequestitem.length > 0 &&
                     selectedrequestitem.map((item, i) => {
+                      const itemprice = formatNumberWithCommas(item.ItemPrice);
+                      const delivery = formatNumberWithCommas(item.DeliveryFee);
+                      const totalitemamout = formatNumberWithCommas(item.ItemPrice);  {/* + item.DeliveryFee */}
+                      
+                      if(typeof itemprice === "boolean" || typeof delivery === "boolean" || typeof totalitemamout === "boolean") {
+                        return (
+                          <TableRow key={i} className="bg-muted/60">
+                            <TableCell colSpan={6} className="p-2 text-[#E54D2E] text-center [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                              An error occured please <a href="" className="underline">reload the page</a>.
+                            </TableCell>
+                          </TableRow>
+                        )
+                      }
                       return (
                         <TableRow key={i} className="bg-muted/60">
                           <TableCell className="font-medium">{item?.ItemDesc}</TableCell>
@@ -645,9 +705,9 @@ const ACRStudentRequest = () => {
                               min={1}
                             />
                           </TableCell>
-                          <TableCell>{formatNumberWithCommas(item.ItemPrice)}</TableCell>
-                          <TableCell>{formatNumberWithCommas(item.DeliveryFee)}</TableCell>
-                          <TableCell className={`text-left capitalize request-item-unit-${item?.ItemCode}`}>{formatNumberWithCommas(item.ItemPrice + item.DeliveryFee)}</TableCell>
+                          <TableCell>{itemprice}</TableCell>
+                          <TableCell>{delivery}</TableCell>
+                          <TableCell className={`text-left request-item-unit-${item?.ItemCode}`}>{totalitemamout}</TableCell>
                           <TableCell className="text-left">
                             <div onClick={() => removeselecteditem(item?.ItemCode)} className="text-[#E54D2E] cursor-pointer w-auto flex">
                               Remove{" "}
@@ -709,14 +769,16 @@ const ACRStudentRequest = () => {
                     <SelectValue placeholder="--" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availablerequestlist.map((items, i) => {
-                      return (
-                        <SelectItem key={i} title={items.ItemDesc} value={items?.ItemCode}>
-                          {items.ItemDesc}
-                          <span className="hidden selected-request-item">{items?.hash}</span>
-                        </SelectItem>
-                      );
-                    })}
+                    <ScrollArea className="h-72" style={{maxHeight: "15em"}}>
+                      {availablerequestlist.map((items, i) => {
+                        return (
+                          <SelectItem key={i} title={items.ItemDesc} value={items?.ItemCode}>
+                            {items.ItemDesc}
+                            <span className="hidden selected-request-item">{items?.hash}</span>
+                          </SelectItem>
+                        );
+                      })}
+                    </ScrollArea>
                   </SelectContent>
                 </Select>
                 <DialogDescription className="request-item-warning hidden"></DialogDescription>
@@ -747,16 +809,18 @@ const ACRStudentRequest = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/60">
-                    <TableHead>Document</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Require Document</TableHead>
                     <TableHead>Selected file</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {selecteditemrequireddocuments?.length > 0 &&
-                    [...new Set(selecteditemrequireddocuments)].map((docs, i) => {
+                    selecteditemrequireddocuments.map((docs, i) => {
                       return (
                         <TableRow key={i} className="bg-muted/60">
+                           <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">{docs.ItemDesc}</TableCell>
                           <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">{docs.RequiredDocumentDescription}</TableCell>
                           <TableCell className="p-2 text-muted-foreground text-left [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
                             {!docs?.UploadedFileName ? (
@@ -804,7 +868,7 @@ const ACRStudentRequest = () => {
                                     </div>
                                     <DialogDescription className="file-warning-message hidden lowercase"></DialogDescription>
                                     <DialogFooter className="sm:justify-start flex">
-                                      <Button onClick={(el) => addfilefn(el, docs?.RequiredDocumentCode)} type="button" variant="secondary">
+                                      <Button onClick={(el) => addfilefn(el, docs?.ItemCode, docs?.RequiredDocumentCode)} type="button" variant="secondary">
                                         Submit
                                       </Button>
                                       <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-2 mt-2 hidden addfilefnrefloader" width="20px" height="20px" stroke="#B4B4B4" />
@@ -816,10 +880,10 @@ const ACRStudentRequest = () => {
                           </TableCell>
                         </TableRow>
                       );
-                    })}
+                  })}
                   {selecteditemrequireddocuments?.length <= 0 && (
                     <TableRow className="bg-muted/60">
-                      <TableCell colSpan={3} className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                      <TableCell colSpan={4} className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
                         -
                       </TableCell>
                     </TableRow>
@@ -937,8 +1001,25 @@ const ACRStudentRequest = () => {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Are you sure you want to continue?</DialogTitle>
-                  <DialogDescription>Please check all required field before submiting</DialogDescription>
+                  <DialogDescription>Please select a <span className="text-[#3B9EFF] font-semibold">payment info</span> and click submit to continue.</DialogDescription>
                 </DialogHeader>
+                <DialogTitle className="font-semibold text-[15px]">Payment Channel:</DialogTitle>
+                <Select>
+                  <SelectTrigger className="flex h-auto w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                    <SelectValue placeholder="--" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-72" style={{maxHeight: "15em"}}>
+                    {
+                        availablepayments.map((obj, i) => (
+                          <SelectItem value={obj.PaymentChannel} key={i}>
+                            {obj.PaymentDesc} <span className="hidden paymentchannel-selected">{obj.PaymentChannel}</span>
+                          </SelectItem>
+                        ))
+                      }
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
                 <DialogDescription className="submit-request-warning hidden"></DialogDescription>
                 <DialogFooter className="sm:justify-start flex">
                   <Button onClick={payrequest} type="button" variant="secondary" className="submit-requested-documents-btn">

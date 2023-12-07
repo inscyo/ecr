@@ -79,6 +79,7 @@ export function getRandomNumber(min, max) {
 }
 
 export function formatNumberWithCommas(number) {
+  if(isNaN(number)) return true;
   const numericValue = Number(number);
   if (isNaN(numericValue)) {
     return 'Invalid Input';
@@ -130,4 +131,8 @@ export function isValidPhoneNumber(phoneNumber) {
   // This regular expression allows for numbers with or without spaces, parentheses, and hyphens
   const phoneRegex = /^0?\d{10}$/;
   return phoneRegex.test(phoneNumber);
+}
+export function isNullOrEmptyOrWhitespace(str) {
+  console.log(str)
+  return !str || str.trim() === '' || str == '--';
 }
