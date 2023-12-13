@@ -34,6 +34,8 @@ const ACRDashboard = lazy(() => import("./app/acr/registrar/dashboard"));
 const PurchaseOrderTagging = lazy(() => import("./app/acr/registrar/purchase-order-tagging"));
 const DeliveryReceiptTagging = lazy(() => import("./app/acr/registrar/delivery-receipt-tagging"));
 const StudentRequestDashboard = lazy(() => import("./app/acr/student/dashboard"));
+const RequestControlHistory = lazy(() => import("./app/acr/student/history"));
+
 
 export default function AppRoutes(){
     const { globalalert, setglobalalert } = useContext(GlobalErrorContext);
@@ -79,6 +81,7 @@ export default function AppRoutes(){
                                 <Route path="/acr/student/request" exact element={<ACRStudentRequest />} />
                                 <Route path="/acr/student/dashboard" exact element={<StudentRequestDashboard />} />
                             </Route>
+                            <Route path="/acr/student/history/:requestcontrol" exact element={<RequestControlHistory />} />
                         </Route>
                     </Routes>
                 </Suspense>

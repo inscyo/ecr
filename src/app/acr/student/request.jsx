@@ -667,13 +667,12 @@ const ACRStudentRequest = () => {
                     <TableHead>Document Type</TableHead>
                     <TableHead>QTY</TableHead>
                     <TableHead>Unit Price</TableHead>
-                    <TableHead>Delivery Fee</TableHead>
+                    {/* <TableHead>Delivery Fee</TableHead> */}
                     <TableHead>Total + Delivery Fee</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {console.log(selectedrequestitem)}
                   {selectedrequestitem.length > 0 &&
                     selectedrequestitem.map((item, i) => {
                       const itemprice = formatNumberWithCommas(item.ItemPrice);
@@ -706,7 +705,7 @@ const ACRStudentRequest = () => {
                             />
                           </TableCell>
                           <TableCell>{itemprice}</TableCell>
-                          <TableCell>{delivery}</TableCell>
+                          {/* <TableCell>{delivery}</TableCell> */}
                           <TableCell className={`text-left request-item-unit-${item?.ItemCode}`}>{totalitemamout}</TableCell>
                           <TableCell className="text-left">
                             <div onClick={() => removeselecteditem(item?.ItemCode)} className="text-[#E54D2E] cursor-pointer w-auto flex">

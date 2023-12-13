@@ -136,3 +136,15 @@ export function isNullOrEmptyOrWhitespace(str) {
   console.log(str)
   return !str || str.trim() === '' || str == '--';
 }
+
+export default function truncateString(inputString, maxLength) {
+  return inputString.length >= maxLength ? inputString.substring(0, maxLength - 3) + '..' : inputString;
+}
+export function isJSON(str) {
+  try {
+      JSON.parse(str);
+      return true;
+  } catch (e) {
+      return false;
+  }
+}

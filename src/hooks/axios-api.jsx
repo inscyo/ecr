@@ -48,7 +48,7 @@ const useAxiosAPI = () => {
         if(UserID) responseData_j.UserId = UserID;
         return typeof responseData_j !== "object" ? JSON.parse(responseData_j) : responseData_j;
       }
-      return typeof responseData_i !== "object" ? JSON.parse(responseData_i) : responseData_i;
+      return typeof responseData_i !== "object" ? JSON.stringify(responseData_i).includes('Process completed succesfully') ? [] : JSON.parse(responseData_i) : responseData_i;
     } catch (error) {
       if (axios.isCancel(error)) {
         setglobalalert({error: true, color: "#E54D2E", body: "Request was canceled."});
