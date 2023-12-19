@@ -544,8 +544,8 @@ const ACRStudentRequest = () => {
 
   return (
     <>
-      <div className="items-start justify-center w-full gap-6 rounded-lg sm:block mb-6">
-        <div className="rounded-xl border bg-card text-card-foreground shadow">
+      <div className="items-start justify-center w-full gap-6 rounded-sm sm:block mb-6">
+        <div className="rounded-sm border bg-card text-card-foreground shadow">
           <div className="p-6 bg-muted/60 gap-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2 mb-4">
@@ -651,95 +651,83 @@ const ACRStudentRequest = () => {
           </div>
         </div>
       </div>
-      <div className="rounded-xl bg-muted/60 border mb-6 p-6 text-card-foreground">
-        <div className=" flex-col mb-4 space-y-1.5">
-          <h2 className="font-semibold text-xl leading-none tracking-tight ">Requested Documents</h2>
-        </div>
-        <div className="pt-0">
-          
-          <div className="rounded-md border">
-            
-            <div className="relative w-full overflow-auto">
-           
-              <Table className="width-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Document Type</TableHead>
-                    <TableHead>QTY</TableHead>
-                    <TableHead>Unit Price</TableHead>
-                    {/* <TableHead>Delivery Fee</TableHead> */}
-                    <TableHead>Total + Delivery Fee</TableHead>
-                    <TableHead>Action</TableHead>
+      <h1 className="text-[23px] font-semibold mt-6 mb-3">Request documents</h1>
+      <Table className="bg-muted/60">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="p-4">Document Type</TableHead>
+            <TableHead>QTY</TableHead>
+            <TableHead>Unit Price</TableHead>
+            {/* <TableHead>Delivery Fee</TableHead> */}
+            <TableHead>Total</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {selectedrequestitem.length > 0 &&
+            selectedrequestitem.map((item, i) => {
+              const itemprice = formatNumberWithCommas(item.ItemPrice);
+              const delivery = formatNumberWithCommas(item.DeliveryFee);
+              const totalitemamout = formatNumberWithCommas(item.ItemPrice);  {/* + item.DeliveryFee */}
+              
+              if(typeof itemprice === "boolean" || typeof delivery === "boolean" || typeof totalitemamout === "boolean") {
+                return (
+                  <TableRow key={i} className="bg-muted/60">
+                    <TableCell colSpan={6} className="p-4 text-[#E54D2E] text-center [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                      An error occured please <a href="" className="underline">reload the page</a>.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedrequestitem.length > 0 &&
-                    selectedrequestitem.map((item, i) => {
-                      const itemprice = formatNumberWithCommas(item.ItemPrice);
-                      const delivery = formatNumberWithCommas(item.DeliveryFee);
-                      const totalitemamout = formatNumberWithCommas(item.ItemPrice);  {/* + item.DeliveryFee */}
-                      
-                      if(typeof itemprice === "boolean" || typeof delivery === "boolean" || typeof totalitemamout === "boolean") {
-                        return (
-                          <TableRow key={i} className="bg-muted/60">
-                            <TableCell colSpan={6} className="p-2 text-[#E54D2E] text-center [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                              An error occured please <a href="" className="underline">reload the page</a>.
-                            </TableCell>
-                          </TableRow>
-                        )
-                      }
-                      return (
-                        <TableRow key={i} className="bg-muted/60">
-                          <TableCell className="font-medium">{item?.ItemDesc}</TableCell>
-                          <TableCell>
-                            <Input
-                              className="flex w-[100px] disabled focus:outline-none border-none bg-transparent px-2 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                              id="subject"
-                              defaultValue={1}
-                              placeholder="--"
-                              type="number"
-                              onInput={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
-                              onBlur={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
-                              onChange={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
-                              min={1}
-                            />
-                          </TableCell>
-                          <TableCell>{itemprice}</TableCell>
-                          {/* <TableCell>{delivery}</TableCell> */}
-                          <TableCell className={`text-left request-item-unit-${item?.ItemCode}`}>{totalitemamout}</TableCell>
-                          <TableCell className="text-left">
-                            <div onClick={() => removeselecteditem(item?.ItemCode)} className="text-[#E54D2E] cursor-pointer w-auto flex">
-                              Remove{" "}
-                              <span className="ml-2 relative top-[4px]">
-                                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path
-                                    d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
-                                    fill="currentColor"
-                                    fillRule="evenodd"
-                                    clipRule="evenodd"
-                                  ></path>
-                                </svg>
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  {selectedrequestitem.length <= 0 && (
-                    <TableRow className="bg-muted/60">
-                      <TableCell colSpan={6} className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                        -
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-        <div className="flex mt-2">
+                )
+              }
+              return (
+                <TableRow key={i} className="bg-muted/60">
+                  <TableCell className="font-medium p-4">{item?.ItemDesc}</TableCell>
+                  <TableCell>
+                    <Input
+                      className="flex w-[100px] disabled focus:outline-none border-none bg-transparent px-2 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      id="subject"
+                      defaultValue={1}
+                      placeholder="--"
+                      type="number"
+                      onInput={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
+                      onBlur={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
+                      onChange={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
+                      min={1}
+                    />
+                  </TableCell>
+                  <TableCell>{itemprice}</TableCell>
+                  {/* <TableCell>{delivery}</TableCell> */}
+                  <TableCell className={`text-left request-item-unit-${item?.ItemCode}`}>{totalitemamout}</TableCell>
+                  <TableCell className="text-left">
+                    <div onClick={() => removeselecteditem(item?.ItemCode)} className="text-[#E54D2E] cursor-pointer w-auto flex">
+                      Remove{" "}
+                      <span className="ml-2 relative top-[4px]">
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path
+                            d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
+                            fill="currentColor"
+                            fillRule="evenodd"
+                            clipRule="evenodd"
+                          ></path>
+                        </svg>
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          {selectedrequestitem.length <= 0 && (
+            <TableRow className="bg-muted/60">
+              <TableCell colSpan={6} className="p-4 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                -
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      <div className="flex pl-4 pt-2 pb-4 bg-muted/60">
           <div className=" justify-start">
-            <Button onClick={getrequestdocumentlist} className="w-auto request-documents-btn disabled text-[#fff] rounded-sm bg-[#104D87] hover:bg-[#104D87] mt-[10px] text-center">
+          <Button onClick={getrequestdocumentlist} className="w-auto request-documents-btn disabled text-[#fff] rounded-sm bg-[#104D87] hover:bg-[#104D87] mt-[10px] text-center">
               <span>Add Item</span>
               <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-[10px] mt-[2px] hidden request-documents-loader" width="15px" height="15px" stroke="#dfdfdf" />
               <span className="ml-2 request-documents-icon">
@@ -797,103 +785,92 @@ const ACRStudentRequest = () => {
             </span>
           </p>
         </div>
-      </div>
-      <div className="rounded-xl bg-muted/60 p-6 pt-6 mb-6 scroll-pb-60 border text-card-foreground">
-        <div className="flex flex-col mb-4 space-y-1.5">
-          <h2 className="font-semibold text-xl leading-none tracking-tight">Upload Supporting Documents</h2>
-        </div>
-        <div className="pt-0">
-          <div className="rounded-md border">
-            <div className="relative w-full overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/60">
-                    <TableHead>Item</TableHead>
-                    <TableHead>Require Document</TableHead>
-                    <TableHead>Selected file</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selecteditemrequireddocuments?.length > 0 &&
-                    selecteditemrequireddocuments.map((docs, i) => {
-                      return (
-                        <TableRow key={i} className="bg-muted/60">
-                           <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">{docs.ItemDesc}</TableCell>
-                          <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">{docs.RequiredDocumentDescription}</TableCell>
-                          <TableCell className="p-2 text-muted-foreground text-left [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                            {!docs?.UploadedFileName ? (
-                              "No file selected"
-                            ) : (
-                              <a target="_blank" href={docs?.UploadedFileData} download={docs?.UploadedFileName} className="underline cursor-pointer text-[#3B9EFF]">
-                                {truncateFilenameWithExtension(docs?.UploadedFileName, 20)}
-                              </a>
-                            )}
-                          </TableCell>
-                          <TableCell className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                            <div className="flex">
-                              <div className=" justify-start">
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
-                                      {docs?.UploadedFileName ? "Choose again" : "Upload"}
-                                      <span className="ml-2">
-                                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                          <path
-                                            d="M7.81825 1.18188C7.64251 1.00615 7.35759 1.00615 7.18185 1.18188L4.18185 4.18188C4.00611 4.35762 4.00611 4.64254 4.18185 4.81828C4.35759 4.99401 4.64251 4.99401 4.81825 4.81828L7.05005 2.58648V9.49996C7.05005 9.74849 7.25152 9.94996 7.50005 9.94996C7.74858 9.94996 7.95005 9.74849 7.95005 9.49996V2.58648L10.1819 4.81828C10.3576 4.99401 10.6425 4.99401 10.8182 4.81828C10.994 4.64254 10.994 4.35762 10.8182 4.18188L7.81825 1.18188ZM2.5 9.99997C2.77614 9.99997 3 10.2238 3 10.5V12C3 12.5538 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2238 12.2239 9.99997 12.5 9.99997C12.7761 9.99997 13 10.2238 13 10.5V12C13 13.104 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2238 2.22386 9.99997 2.5 9.99997Z"
-                                            fill="currentColor"
-                                            fillRule="evenodd"
-                                            clipRule="evenodd"
-                                          ></path>
-                                        </svg>
-                                      </span>
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="sm:max-w-md">
-                                    <DialogHeader>
-                                      <DialogTitle>{docs.RequiredDocumentDescription}</DialogTitle>
-                                      <DialogDescription>
-                                        please select the desired file and proceed by clicking submit
-                                        <span className="mt-5 mb-2 inline-block w-full">allowed file types: </span>
-                                        <span className="text-[#33B074]">{allowedExtensions.join(", ")}</span>
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="grid flex-1 gap-2">
-                                        <div className="grid w-full max-w-sm items-center gap-1.5">
-                                          <Input ref={addfileref} className="pt-[6px]" type="file" />
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <DialogDescription className="file-warning-message hidden lowercase"></DialogDescription>
-                                    <DialogFooter className="sm:justify-start flex">
-                                      <Button onClick={(el) => addfilefn(el, docs?.ItemCode, docs?.RequiredDocumentCode)} type="button" variant="secondary">
-                                        Submit
-                                      </Button>
-                                      <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-2 mt-2 hidden addfilefnrefloader" width="20px" height="20px" stroke="#B4B4B4" />
-                                    </DialogFooter>
-                                  </DialogContent>
-                                </Dialog>
+        <h1 className="text-[23px] font-semibold mt-[30px] mb-3">Supporting documents</h1>
+        <Table className="bg-muted/60 mb-10">
+          <TableHeader>
+            <TableRow className="bg-muted/60">
+              <TableHead className="p-4">Item</TableHead>
+              <TableHead>Require Document</TableHead>
+              <TableHead>Selected file</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {selecteditemrequireddocuments?.length > 0 &&
+              selecteditemrequireddocuments.map((docs, i) => {
+                return (
+                  <TableRow key={i} className="bg-muted/60">
+                      <TableCell className="p-4  text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">{docs.ItemDesc}</TableCell>
+                    <TableCell className="p-2 text-left font-semibold [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">{docs.RequiredDocumentDescription}</TableCell>
+                    <TableCell className="p-2 text-muted-foreground text-left [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                      {!docs?.UploadedFileName ? (
+                        "No file selected"
+                      ) : (
+                        <a target="_blank" href={docs?.UploadedFileData} download={docs?.UploadedFileName} className="underline cursor-pointer text-[#3B9EFF]">
+                          {truncateFilenameWithExtension(docs?.UploadedFileName, 20)}
+                        </a>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                      <div className="flex">
+                        <div className=" justify-start">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
+                                {docs?.UploadedFileName ? "Choose again" : "Upload"}
+                                <span className="ml-2">
+                                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                      d="M7.81825 1.18188C7.64251 1.00615 7.35759 1.00615 7.18185 1.18188L4.18185 4.18188C4.00611 4.35762 4.00611 4.64254 4.18185 4.81828C4.35759 4.99401 4.64251 4.99401 4.81825 4.81828L7.05005 2.58648V9.49996C7.05005 9.74849 7.25152 9.94996 7.50005 9.94996C7.74858 9.94996 7.95005 9.74849 7.95005 9.49996V2.58648L10.1819 4.81828C10.3576 4.99401 10.6425 4.99401 10.8182 4.81828C10.994 4.64254 10.994 4.35762 10.8182 4.18188L7.81825 1.18188ZM2.5 9.99997C2.77614 9.99997 3 10.2238 3 10.5V12C3 12.5538 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2238 12.2239 9.99997 12.5 9.99997C12.7761 9.99997 13 10.2238 13 10.5V12C13 13.104 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2238 2.22386 9.99997 2.5 9.99997Z"
+                                      fill="currentColor"
+                                      fillRule="evenodd"
+                                      clipRule="evenodd"
+                                    ></path>
+                                  </svg>
+                                </span>
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>{docs.RequiredDocumentDescription}</DialogTitle>
+                                <DialogDescription>
+                                  please select the desired file and proceed by clicking submit
+                                  <span className="mt-5 mb-2 inline-block w-full">allowed file types: </span>
+                                  <span className="text-[#33B074]">{allowedExtensions.join(", ")}</span>
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="flex items-center space-x-2">
+                                <div className="grid flex-1 gap-2">
+                                  <div className="grid w-full max-w-sm items-center gap-1.5">
+                                    <Input ref={addfileref} className="pt-[6px]" type="file" />
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                  })}
-                  {selecteditemrequireddocuments?.length <= 0 && (
-                    <TableRow className="bg-muted/60">
-                      <TableCell colSpan={4} className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                        -
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="rounded-xl bg-muted/60 p-6 mb-6 border text-card-foreground shadow">
+                              <DialogDescription className="file-warning-message hidden lowercase"></DialogDescription>
+                              <DialogFooter className="sm:justify-start flex">
+                                <Button onClick={(el) => addfilefn(el, docs?.ItemCode, docs?.RequiredDocumentCode)} type="button" variant="secondary">
+                                  Submit
+                                </Button>
+                                <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-2 mt-2 hidden addfilefnrefloader" width="20px" height="20px" stroke="#B4B4B4" />
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+            })}
+            {selecteditemrequireddocuments?.length <= 0 && (
+              <TableRow className="bg-muted/60">
+                <TableCell colSpan={4} className="p-2 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                  -
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      <div className="rounded-sm bg-muted/60 p-6 mb-6 border text-card-foreground shadow">
         <div className="grid gap-6"></div>
         <div className="mb-4">
           <div className="flex items-center justify-center relative [&>div]:w-full">
