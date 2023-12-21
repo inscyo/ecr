@@ -7,7 +7,7 @@ import { useContext, useRef, useState } from "react";
 import { PageTitleContext } from "../../../context/page-title";
 import { useEffect } from "react";
 import { GlobalErrorContext } from "../../../context/global-alert";
-import truncateString, { allowedExtensions, cryptoEncrypt, delay, formatFileSize, formatNumberWithCommas, truncateFilenameWithExtension, validateFileExtension, isNullOrEmpty, isValidEmail, isValidPhoneNumber, getRandomNumber, isNullOrEmptyOrWhitespace, isJSON } from "../../../helpers/all";
+import truncateString, { allowedExtensions, cryptoEncrypt, delay, formatFileSize, formatNumberWithCommas, truncateFilenameWithExtension, validateFileExtension, isNullOrEmpty, isValidEmail, isValidPhoneNumber, getRandomNumber, isNullOrEmptyOrWhitespace, isJSON, getQueryStringParams } from "../../../helpers/all";
 import useAxiosAPI from "../../../hooks/axios-api";
 import { cryptoDecrypt } from "../../../helpers/all";
 import Cookies from "js-cookie";
@@ -25,10 +25,14 @@ export default function ECRViewRequest() {
   const apiRequest = useAxiosAPI();
   const { settitle } = useContext(PageTitleContext);
   const { setglobalalert } = useContext(GlobalErrorContext);
-  const { studentno: StudentID, requestcontrol: RequestControl } = useParams();
+  const { studentid: StudentID, requestcontrol: RequestControl } = useParams();
+  
   const { UserId: UserID } = JSON.parse(cryptoDecrypt(Cookies.get("user")));
   const addfileref = useRef();
   const [requestinfo, setrequestinfo] = useState([]);
+  
+  const remarksref = useRef();
+  const messageref = useRef();
 
   const getrequestinfo = async () => {
     if (requestinfo?.length > 0) return;
@@ -163,7 +167,7 @@ export default function ECRViewRequest() {
     const warning = document.querySelector(".delete-file-warning");
     warning.style.display = "none";
     target.innerText = "Deleting...";
-    const deleteresponse = await apiRequest("ACR_DeleteUploadRequestControlFile", "JSON", { StudentID, UserID, RequestControl: requestinfo?.RequestControl, SupportedID }, false);
+    const deleteresponse = await apiRequest("ACR_DeleteUploadRequestControlFile", "JSON", { StudentID, UserID, RequestControl: requestinfo?.RequestControl, SupportedID }, true);
     const { responsecode, responsemessage, UploadedSupportingDocuments } = deleteresponse[0];
     if (responsecode == "1") {
       warning.style.display = "block";
@@ -178,6 +182,53 @@ export default function ECRViewRequest() {
       };
     });
   };
+
+  const updatetopending = async (el) => {
+    const Message = messageref.current.value;
+    const Remarks = remarksref.current.value;
+    const btn = el.target;
+
+    const loader = document.querySelector(".pending-loader");
+    const warning = document.querySelector(".pending-warning-message");
+    const cancel = document.querySelector(".cancel-pending");
+
+    warning.style.display = "none";
+    warning.style.color = "#FFA057";
+    cancel.style.display = "none";
+
+    loader.style.display = "block";
+    btn.style.cursor = "not-allowed";
+    btn.style.cursor = "not-allowed";
+    btn.disabled = true;
+    btn.disabled = true;
+
+    await delay(1000);
+
+    const requestobj = {
+      StudentID,
+      UserID,
+      RequestControl,
+      Remarks,
+      Message
+    }
+    const pendingresponse = await apiRequest("ACR_ToPendingStatus_Registrar", "JSON", requestobj, false);
+    const { responsecode, responsemessage } = pendingresponse[0];
+    warning.style.display = "block";
+
+    if(responsecode == '1'){
+      warning = responsemessage;
+      cancel.style.display = "block";
+      return
+    }
+
+    btn.style.cursor = "pointer";
+    btn.style.cursor = "pointer";
+    btn.disabled = false;
+    loader.style.display = "none";
+    warning.style.color = "#33B074";
+    warning.innerText = responsemessage;
+    cancel.style.display = "block";
+  }
 
   useEffect(() => {
     settitle("Request Info");
@@ -301,12 +352,12 @@ export default function ECRViewRequest() {
           </Table>
           <div className="flex bg-muted/60 ">
             <p className="p-2 mb-2 mt-2  px-4 text-[#fff] inline-block rounded-sm font-medium">
-              {" "}
               <span>
-                Total Amount: <span>{formatNumberWithCommas(requestinfo?.RequestedItemsTotalAmount)}</span> PHP
-              </span>
-              <span style={{ backgroundColor: requestinfo?.PaymentStatus == "0" ? "#E5484D" : "#2F7C57" }} className={`p-1 ml-3 font-semibold rounded-sm text-[13px]`}>
-                {requestinfo?.PaymentStatus == "0" ? "Not cleared" : "Cleared"}
+                <span style={{ color: requestinfo?.PaymentStatus == "0" ? "#E5484D" : "#33B074" }} className={`font-semibold rounded-sm`}>
+                  {requestinfo?.PaymentStatus == "0" ? "Not cleared" : "Cleared"}
+                </span>
+                <br />
+                Total: <span className="font-normal">{formatNumberWithCommas(requestinfo?.RequestedItemsTotalAmount)} PHP</span>
               </span>
             </p>
           </div>
@@ -326,32 +377,42 @@ export default function ECRViewRequest() {
                   {requestinfo?.UploadedSupportingDocuments?.map((items, i) => {
                     return (
                       <TableRow key={i} className="bg-muted/60">
-                        <TableCell className="p-4 align-middle font-medium text-left  text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                          <a href="" download={items?.DocumentName} className="underline flex text-[#3E63DD]">
-                            {truncateString(items?.DocumentName, 20)}
-                            <span className="mt-[4px] ml-[5px]">
-                              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1041 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                              </svg>
-                            </span>
+                        <TableCell style={{ color: "#ebebeb" }} className="p-4 align-middle font-medium text-left  text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                          <a href="" download={items?.DocumentName} className=" flex ">
+                            {items?.DocumentName}
                           </a>
                         </TableCell>
-                        <TableCell style={{ color: "#ebebeb" }} className="p-4 align-middle font-medium text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                          {items?.UploadedBy || "-"}
+                        <TableCell style={{ color: "#ebebeb" }} className="p-4 align-middle font-medium lowercase text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                          {items?.UploadedBy.includes("()") ? "-" : items?.UploadedBy.includes(UserID) ? "You" : items?.UploadedBy || "-"}
                         </TableCell>
                         <TableCell style={{ color: "#ebebeb" }} className="p-4 align-middle font-medium text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
                           {items?.DateCreated}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center flex  justify-center">
                           {items?.UploadedBy.includes(UserID) ? (
-                            <div onClick={(el) => removeuploadeddocument(items?.SUPPORTED_DOCUMENT_ID, el)} className="text-[#E54D2E] cursor-pointer w-auto flex justify-center">
-                              Remove{" "}
-                              <span className="ml-2 relative top-[4px]">
-                                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                                </svg>
-                              </span>
-                            </div>
+                            <>
+                              <a href="" download={items?.DocumentName} className=" flex ">
+                                <div className="mr-3 text-center bg-[#205D9E] w-[35px] cursor-pointer pb-[10px] py-[4px] px-[3px] font-medium flex justify-center rounded-sm">
+                                  <span className="relative top-[4px]">
+                                    <svg width="17" height="17" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1041 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                                    </svg>
+                                  </span>
+                                </div>
+                              </a>
+                              {/* <div className="mr-3 text-center bg-[#205D9E] w-[35px] cursor-pointer pb-[10px] py-[4px] px-[3px] font-medium flex justify-center rounded-sm">
+                                <span className="relative top-[4px]">
+                                <svg width="17" height="17" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 11C4.80285 11 2.52952 9.62184 1.09622 7.50001C2.52952 5.37816 4.80285 4 7.5 4C10.1971 4 12.4705 5.37816 13.9038 7.50001C12.4705 9.62183 10.1971 11 7.5 11ZM7.5 3C4.30786 3 1.65639 4.70638 0.0760002 7.23501C-0.0253338 7.39715 -0.0253334 7.60288 0.0760014 7.76501C1.65639 10.2936 4.30786 12 7.5 12C10.6921 12 13.3436 10.2936 14.924 7.76501C15.0253 7.60288 15.0253 7.39715 14.924 7.23501C13.3436 4.70638 10.6921 3 7.5 3ZM7.5 9.5C8.60457 9.5 9.5 8.60457 9.5 7.5C9.5 6.39543 8.60457 5.5 7.5 5.5C6.39543 5.5 5.5 6.39543 5.5 7.5C5.5 8.60457 6.39543 9.5 7.5 9.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
+                                </span>
+                              </div> */}
+                              <div onClick={(el) => removeuploadeddocument(items?.SUPPORTED_DOCUMENT_ID, el)} className="text-center font-medium bg-[#853A2D] w-[35px] cursor-pointer pb-[10px] py-[4px] px-[3px] flex justify-center rounded-sm">
+                                <span className="relative top-[4px]">
+                                  <svg width="17" height="17" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4L3.5 4C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                                  </svg>
+                                </span>
+                              </div>
+                            </>
                           ) : (
                             "-"
                           )}
@@ -401,7 +462,7 @@ export default function ECRViewRequest() {
                       Submit
                     </Button>
                     <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-2 mt-2 hidden addfilefnrefloader" width="20px" height="20px" stroke="#B4B4B4" />
-                  </DialogFooter>
+                    </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>
@@ -416,65 +477,45 @@ export default function ECRViewRequest() {
                     <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
                       Line address 1:
                     </label>
-                    <Input className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" defaultValue={"Commonwealth Ever"} placeholder="--" />
+                    <Input disabled={true} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" defaultValue={"Commonwealth Ever"} placeholder="--" />
                   </div>
                   <div className="grid gap-2">
                     <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
                       Line address 2:
                     </label>
-                    <Input className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" placeholder="--" />
+                    <Input disabled={true} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" placeholder="--" />
                   </div>
                   <div className="grid gap-2">
                     <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
                       Municipality/City:
                     </label>
-                    <Input className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" placeholder="--" defaultValue={"Quezon City"} />
+                    <Input disabled={true} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" placeholder="--" defaultValue={"Quezon City"} />
                   </div>
                   <div className="grid gap-2">
                     <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
                       Province:
                     </label>
-                    <Input className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" defaultValue={"NCR"} placeholder="--" />
+                    <Input disabled={true} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" defaultValue={"NCR"} placeholder="--" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2 mb-4">
                       <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
                         Contry:
                       </label>
-
-                      <Input className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" placeholder="--" defaultValue={"Philippines"} />
+                      <Input disabled={true} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" placeholder="--" defaultValue={"Philippines"} />
                     </div>
-
                     <div className="grid gap-2 mb-4">
                       <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
                         Zip:
                       </label>
-                      <Input className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" defaultValue={"1144"} placeholder="--" />
+                      <Input disabled={true} className="flex  h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="subject" defaultValue={"1144"} placeholder="--" />
                     </div>
                   </div>
                 </div>
               </div>
-            </div>{" "}
-          </div>
-          <h1 className="text-[23px] font-semibold bg-muted/60 p-4 pb-0">Disposition</h1>
-          <div className="bg-muted/60 p-4 mb-6  text-card-foreground shadow">
-            <div className="grid gap-6"></div>
-            <div className="mb-4">
-              <div className="flex items-center justify-center relative [&>div]:w-full">
-                <div className="grid gap-6">
-                  <div className="grid gap-2">
-                    <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
-                      Remarks:
-                    </label>
-                    <Textarea className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="description" placeholder="--" defaultValue={""} />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-md font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="subject">
-                      Message to student:
-                    </label>
-                    <Textarea className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" id="description" placeholder="--" defaultValue={""} />
-                  </div>
-                  <div className="flex gap-2">
+              <div className="flex gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
                     <Button variant="outline" className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
                       Pending
                       <span className="ml-2">
@@ -483,6 +524,35 @@ export default function ECRViewRequest() {
                         </svg>
                       </span>
                     </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Pending</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                      Remarks
+                      <Textarea ref={remarksref} placeholder="--" className="w-full mt-2" />
+                    </DialogDescription>
+                    <DialogDescription>
+                      Message to student
+                      <Textarea ref={messageref} placeholder="--" className="w-full mt-2" />
+                    </DialogDescription>
+                    <DialogDescription className="pending-warning-message hidden lowercase"></DialogDescription>
+                    <DialogFooter className="sm:justify-start flex">
+                      <Button type="button" variant="secondary" onClick={(el) => updatetopending(el)}>
+                        Submit
+                      </Button>
+                      <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-2 mt-2 hidden pending-loader" width="20px" height="20px" stroke="#B4B4B4" />
+                      <DialogClose>
+                        <p className="cancel-pending inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2 submit-requested-documents-btn" type="button" variant="secondary">
+                          Close
+                        </p>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Dialog>
+                  <DialogTrigger asChild>
                     <Button variant="outline" className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
                       Route To
                       <span className="ml-2">
@@ -491,18 +561,94 @@ export default function ECRViewRequest() {
                         </svg>
                       </span>
                     </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Route</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                      Route to (<span>required</span>)
+                      <Select>
+                      <SelectTrigger className="flex mt-2 h-auto w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <ScrollArea className="h-24" style={{maxHeight: "15em"}}>
+                          <SelectItem value="accounting">
+                            Accounting
+                          </SelectItem>
+                          <SelectItem value="acad">
+                            ACAD
+                          </SelectItem> 
+                          <SelectItem value="audit">
+                            Audit
+                          </SelectItem>
+                        </ScrollArea>
+                      </SelectContent>
+                    </Select>
+                    </DialogDescription>
+                    
+                    <DialogDescription>
+                      Remarks
+                      <Textarea placeholder="--" className="w-full mt-2" />
+                    </DialogDescription>
+                    <DialogDescription>
+                      Message to student
+                      <Textarea placeholder="--" className="w-full mt-2" />
+                    </DialogDescription>
+                    <DialogDescription className="file-warning-message hidden lowercase"></DialogDescription>
+                    <DialogFooter className="sm:justify-start flex">
+                      <Button type="button" variant="secondary">
+                        Submit
+                      </Button>
+                      <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-2 mt-2 hidden addfilefnrefloader" width="20px" height="20px" stroke="#B4B4B4" />
+                      <DialogClose>
+                        <p className="cancel-requested-documents inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2 submit-requested-documents-btn" type="button" variant="secondary">
+                          Close
+                        </p>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Dialog>
+                  <DialogTrigger asChild>
                     <Button variant="outline" className="w-auto text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">
                       Approve / Proceed
                       <span className="ml-2">
                         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRrule="evenodd" clipRule="evenodd"></path>
+                          <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
                         </svg>
                       </span>
                     </Button>
-                  </div>
-                </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Approve / Proceed</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                      Remarks
+                      <Textarea placeholder="--" className="w-full mt-2" />
+                    </DialogDescription>
+                    <DialogDescription>
+                      Message to student
+                      <Textarea placeholder="--" className="w-full mt-2" />
+                    </DialogDescription>
+                    <DialogDescription className="file-warning-message hidden lowercase"></DialogDescription>
+                    <DialogFooter className="sm:justify-start flex">
+                      <Button type="button" variant="secondary">
+                        Submit
+                      </Button>
+                      <ShadcnCleverEarwig74Loader strokewidth="5" classess="ml-2 mt-2 hidden addfilefnrefloader" width="20px" height="20px" stroke="#B4B4B4" />
+                      <DialogClose>
+                        <p className="cancel-requested-documents inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2 submit-requested-documents-btn" type="button" variant="secondary">
+                          Close
+                        </p>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
-            </div>{" "}
+            </div>
           </div>
         </TabsContent>
         <TabsContent value="procsess-history" className=" mt-6">

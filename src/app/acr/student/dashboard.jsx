@@ -303,7 +303,7 @@ export default function StudentRequestDashboard() {
                         <TableCell className=" p-4 text-left text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
                           <span style={{color: item?.RouteToStep == '0' ? '#FF6847EB' : '#B88C67'}} className={`font-normal text-[14px] flex`}>
                             {item?.RouteDescription}
-                            {(item?.RequestRemarks || item?.RequestMessageToStudent) && (
+                            {item?.RequestMessageToStudent && (
                               <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -312,7 +312,7 @@ export default function StudentRequestDashboard() {
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="text-[15px]">{item?.RequestMessageToStudent || item?.RequestRemarks}</p>
+                                  <p className="text-[15px]">{item?.RequestMessageToStudent}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>

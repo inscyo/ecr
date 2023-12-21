@@ -148,3 +148,14 @@ export function isJSON(str) {
       return false;
   }
 }
+
+export function getQueryStringParams() {
+  const queryString = window.location.search.slice(1);
+  const params = {};
+
+  queryString.replace(/([^&=]+)=([^&]*)/g, (match, key, value) => {
+    params[decodeURIComponent(key)] = decodeURIComponent(value.replace(/\+/g, ''));
+  });
+
+  return params;
+}

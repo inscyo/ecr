@@ -80,7 +80,7 @@ export default function AppRoutes(){
                                 <Route path="/acr/registrar/dashboard" exact element={<ACRDashboard />} />
                                 <Route path="/acr/registrar/purchase-order-tagging" exact element={<PurchaseOrderTagging />} />
                                 <Route path="/acr/registrar/delivery-receipt-tagging" exact element={<DeliveryReceiptTagging />} />
-                                <Route path="/acr/registrar/view/:studentno/:requestcontrol" exact element={<ViewRequestControl />} />
+                                <Route path="/acr/registrar/view/:studentid/:requestcontrol" exact element={<ViewRequestControl />} />
                                 <Route path="/acr/student/request" exact element={<ACRStudentRequest />} />
                                 <Route path="/acr/student/dashboard" exact element={<StudentRequestDashboard />} />
                             </Route>
