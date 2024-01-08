@@ -36,7 +36,7 @@ const PurchaseOrderTagging = () => {
                 <Input
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
               <div className="grid gap-2 mb-4">
@@ -48,7 +48,7 @@ const PurchaseOrderTagging = () => {
                 </label>
                 <Select>
                   <SelectTrigger className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                    <SelectValue placeholder="--" />
+                    <SelectValue placeholder="-" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -103,7 +103,7 @@ const PurchaseOrderTagging = () => {
                 <Input
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
               <div className="grid gap-2 mb-4">
@@ -116,7 +116,7 @@ const PurchaseOrderTagging = () => {
                 <Input
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
             </div>
@@ -131,7 +131,7 @@ const PurchaseOrderTagging = () => {
                 <Input
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
               <div className="grid gap-2 mb-4">
@@ -144,7 +144,7 @@ const PurchaseOrderTagging = () => {
                 <Input
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
             </div>

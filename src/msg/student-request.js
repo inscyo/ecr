@@ -1,6 +1,6 @@
 export const validations = [
     {
-      field: StudentID,
+      field: import.meta.env.VITE_STUDENT_ID?.length > 0 ? import.meta.env.VITE_STUDENT_ID : StudentID,
       message:
         "Please ensure you have entered the student ID. This field is required for accurate identification of the student.",
     },

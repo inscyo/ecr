@@ -94,7 +94,7 @@ export function truncateFilenameWithExtension(filename, maxLength) {
 
   const extensionIndex = filename.lastIndexOf('.');
   const nameWithoutExtension = filename.substring(0, extensionIndex);
-  const truncatedName = nameWithoutExtension.substring(0, maxLength - 3) + '...';
+  const truncatedName = nameWithoutExtension.substring(0, maxLength - 3) + '..';
   const result = truncatedName + filename.substring(extensionIndex);
 
   return result;
@@ -113,7 +113,7 @@ export function formatFileSize(fileSizeInBytes) {
 
   return size.toFixed(2) + ' ' + units[unitIndex];
 }
-export const allowedExtensions = ['jpg', 'jpeg', 'webp', 'png', 'gif', 'bmp', 'tiff', 'doc', 'docx', 'pdf', 'txt', 'ppt', 'pptx', 'xls', 'xlsx']
+export const allowedExtensions = ['jpg', 'jpeg', 'webp', 'png', 'gif', 'bmp', 'tiff', 'doc', 'docx', 'pdf']
 export function validateFileExtension(filename) {
   const extensionMatch = /\.([a-z0-9]+)$/i.exec(filename);
   return extensionMatch && allowedExtensions.includes(extensionMatch[1].toLowerCase());
@@ -138,7 +138,7 @@ export function isNullOrEmptyOrWhitespace(str) {
 }
 
 export default function truncateString(inputString, maxLength) {
-  return inputString.length >= maxLength ? inputString.substring(0, maxLength - 3) + '..' : inputString;
+  return inputString.length >= maxLength ? inputString.substring(0, maxLength - 3) + '...' : inputString;
 }
 export function isJSON(str) {
   try {

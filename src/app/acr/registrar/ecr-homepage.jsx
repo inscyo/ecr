@@ -1,20 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-import { useContext, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import { PageTitleContext } from "../../../context/page-title";
 import { useEffect } from "react";
 import { GlobalErrorContext } from "../../../context/global-alert";
-import truncateString, { allowedExtensions, cryptoEncrypt, delay, formatFileSize, formatNumberWithCommas, truncateFilenameWithExtension, validateFileExtension, isNullOrEmpty, isValidEmail, isValidPhoneNumber, getRandomNumber, isNullOrEmptyOrWhitespace, isJSON } from "../../../helpers/all";
 import useAxiosAPI from "../../../hooks/axios-api";
 import { cryptoDecrypt } from "../../../helpers/all";
 import Cookies from "js-cookie";
-import { ShadcnCleverEarwig74Loader } from "../../../layout/loaders";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
@@ -22,25 +14,37 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useNavigate } from "react-router-dom";
-let refdetailsfethcing = false;
 
 export default function ECRHomepage() {
   const apiRequest = useAxiosAPI();
   const { settitle } = useContext(PageTitleContext);
   const { setglobalalert } = useContext(GlobalErrorContext);
   const [studentrequestitems, setstudentrequestitems] = useState([]);
-  const [referencenoinfo, setreferencenoinfo] = useState({});
   const navigate = useNavigate();
   const { UserId: UserID } = JSON.parse(cryptoDecrypt(Cookies.get("user")));
+  const [userrouteno, setuserrouteno] = useState(2);
+
+  const getuserroute = async () => {
+    const response = await apiRequest("ACR_GetUserRouteNo", "JSON", { UserID: import.meta.env.VITE_USER_ID?.length > 0 ? import.meta.env.VITE_USER_ID : UserID });
+    const {responsecode, responsemessage, routeno} = response[0];
+
+    if(responsecode == '1'){
+      setglobalalert({error: true, color: "#E54D2E", body: responsemessage});
+      return;
+    }
+
+    setuserrouteno(routeno);
+    studentrequestitemsfn();
+  }
 
   const studentrequestitemsfn = async () => {
-    const response = await apiRequest("ACR_StudentRequestedItems_Registrar", "JSON", { UserID });
+    const response = await apiRequest("ACR_StudentRequestList", "JSON", { UserID: import.meta.env.VITE_USER_ID?.length > 0 ? import.meta.env.VITE_USER_ID : UserID });
     setstudentrequestitems(response);
   };
 
   useEffect(() => {
     settitle("Registrar/ACR");
-    studentrequestitemsfn();
+    getuserroute();
   }, []);
 
   return (
@@ -53,6 +57,7 @@ export default function ECRHomepage() {
                 <TableRow className="bg-muted/60">
                   <TableHead className="p-4 text-[15px]">RequestID</TableHead>
                   <TableHead className="p-4 text-[15px]">ReferenceNo</TableHead>
+                  <TableHead className="p-4 text-[15px]">Student</TableHead>
                   {/* <TableHead className="p-4 text-[15px] text-center">Items(s)</TableHead> */}
                   <TableHead className="p-4 text-[15px]">Program</TableHead>
                   {/* <TableHead className="p-4 text-[15px]">Total Amount</TableHead> */}
@@ -73,6 +78,9 @@ export default function ECRHomepage() {
                           <span className="relative font-semibold text-[14px]">
                             {item?.RequestReferenceNo}
                           </span>
+                        </TableCell>
+                        <TableCell className="p-4 text-left text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
+                          <span  className="font-semibold text-[14px]">{item?.StudentName}</span>
                         </TableCell>
                         {/* <TableCell className=" p-4 text-center text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
                           <span onClick={() => viewrequesteditems(item?.RequestControl)} className="text-[#0090FF] relative font-semibold  underline cursor-pointer text-[14px]">
@@ -182,7 +190,7 @@ export default function ECRHomepage() {
                           </span>
                         </TableCell>
                         <TableCell className=" p-4 text-left text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] [&:has([role=checkbox])]:pl-3">
-                          <Button onClick={() => navigate(`/acr/registrar/view?a=${cryptoEncrypt(item?.StudentID)}&b=${cryptoEncrypt(item?.RequestControl)}`)} className="text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">View 
+                          <Button onClick={() => navigate(`/acr/registrar/view/${item?.StudentID}/${item?.RequestControl}`, {state: { userrouteno }})} className="text-[#fff] rounded-sm bg-[#205D9E] hover:bg-[#205D9E] text-center">View 
                             <span className="ml-[5px]">
                               <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 11C4.80285 11 2.52952 9.62184 1.09622 7.50001C2.52952 5.37816 4.80285 4 7.5 4C10.1971 4 12.4705 5.37816 13.9038 7.50001C12.4705 9.62183 10.1971 11 7.5 11ZM7.5 3C4.30786 3 1.65639 4.70638 0.0760002 7.23501C-0.0253338 7.39715 -0.0253334 7.60288 0.0760014 7.76501C1.65639 10.2936 4.30786 12 7.5 12C10.6921 12 13.3436 10.2936 14.924 7.76501C15.0253 7.60288 15.0253 7.39715 14.924 7.23501C13.3436 4.70638 10.6921 3 7.5 3ZM7.5 9.5C8.60457 9.5 9.5 8.60457 9.5 7.5C9.5 6.39543 8.60457 5.5 7.5 5.5C6.39543 5.5 5.5 6.39543 5.5 7.5C5.5 8.60457 6.39543 9.5 7.5 9.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
                             </span>

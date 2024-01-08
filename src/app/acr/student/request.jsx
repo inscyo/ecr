@@ -5,19 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useContext, useRef, useState } from "react";
 import { PageTitleContext } from "../../../context/page-title";
 import { useEffect } from "react";
 import { GlobalErrorContext } from "../../../context/global-alert";
 import { ShadcnCleverEarwig74Loader } from "../../../layout/loaders";
-import { allowedExtensions, cryptoEncrypt, delay, formatFileSize, formatNumberWithCommas, truncateFilenameWithExtension, validateFileExtension, isNullOrEmpty, isValidEmail, isValidPhoneNumber, getRandomNumber, isNullOrEmptyOrWhitespace } from "../../../helpers/all";
+import { allowedExtensions, cryptoEncrypt, delay, formatFileSize, formatNumberWithCommas, truncateFilenameWithExtension, validateFileExtension, isNullOrEmpty, isValidEmail, isValidPhoneNumber, getRandomNumber } from "../../../helpers/all";
 import useAxiosAPI from "../../../hooks/axios-api";
 import { cryptoDecrypt } from "../../../helpers/all";
 import Cookies from "js-cookie";
 import { useMemo } from "react";
-import { Box } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 const ACRStudentRequest = () => {
@@ -46,7 +44,7 @@ const ACRStudentRequest = () => {
       return;
     }
 
-    const studentprogramresponse = await apiRequest("ACR_StudentProgramCodeList", "JSON", { StudentID: StudentID });
+    const studentprogramresponse = await apiRequest("ACR_StudentProgramCodeList", "JSON", { StudentID: import.meta.env.VITE_STUDENT_ID?.length > 0 ? import.meta.env.VITE_STUDENT_ID : StudentID });
     const response = await apiRequest("ACR_RequestControlNumber", "", {});
     const controlnumber = response?.[0]?.GeneratedControlNumber;
     if (!controlnumber) {
@@ -351,7 +349,7 @@ const ACRStudentRequest = () => {
 
       const validations = [
         {
-          field: StudentID,
+          field: import.meta.env.VITE_STUDENT_ID?.length > 0 ? import.meta.env.VITE_STUDENT_ID : StudentID,
           message: "Please ensure you have entered the student ID. This field is required for accurate identification of the student.",
         },
         {
@@ -463,7 +461,7 @@ const ACRStudentRequest = () => {
 
       const requestinfo = {
         ControlNumber: controlnumberref.current,
-        StudentID,
+        StudentID: import.meta.env.VITE_STUDENT_ID?.length > 0 ? import.meta.env.VITE_STUDENT_ID : StudentID,
         ProgramCode: program,
         Email: studentemail,
         Contact: studentcontact,
@@ -556,8 +554,8 @@ const ACRStudentRequest = () => {
                   className="flex disabled h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   disabled={true}
-                  defaultValue={StudentID}
-                  placeholder="--"
+                  defaultValue={import.meta.env.VITE_STUDENT_ID?.length > 0 ? import.meta.env.VITE_STUDENT_ID : StudentID}
+                  placeholder="-"
                 />
               </div>
               <div className="grid gap-2 mb-4">
@@ -566,7 +564,7 @@ const ACRStudentRequest = () => {
                 </label>
                 <Select>
                   <SelectTrigger className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                    <SelectValue placeholder="--" />
+                    <SelectValue placeholder="-" />
                   </SelectTrigger>
                   <SelectContent>
                     <ScrollArea className="h-auto" style={{maxHeight: "15em"}}>
@@ -593,7 +591,7 @@ const ACRStudentRequest = () => {
                   className="flex disabled h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   disabled={true}
-                  placeholder="--"
+                  placeholder="-"
                   defaultValue={controlnumberref.current}
                 />
               </div>
@@ -605,7 +603,7 @@ const ACRStudentRequest = () => {
               <Input
                 className="flex disabled h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 id="subject"
-                placeholder="--"
+                placeholder="-"
                 disabled={true}
                 defaultValue={`${LastName || "-"}, ${FirstName || "-"} ${MiddleName || "-"}`}
               />
@@ -620,7 +618,7 @@ const ACRStudentRequest = () => {
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   defaultValue={"sample@gmail.com"}
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
               <div className="grid gap-2 mb-4">
@@ -632,7 +630,7 @@ const ACRStudentRequest = () => {
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   defaultValue={"09123456789"}
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
             </div>
@@ -644,7 +642,7 @@ const ACRStudentRequest = () => {
                 ref={studentpurposeref}
                 className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 id="description"
-                placeholder="--"
+                placeholder="-"
                 defaultValue={""}
               />
             </div>
@@ -687,7 +685,7 @@ const ACRStudentRequest = () => {
                       className="flex w-[100px] disabled focus:outline-none border-none bg-transparent px-2 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       id="subject"
                       defaultValue={1}
-                      placeholder="--"
+                      placeholder="-"
                       type="number"
                       onInput={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
                       onBlur={(el) => calculatetotalunitprice(el, item, `request-item-unit-${item?.ItemCode}`)}
@@ -753,7 +751,7 @@ const ACRStudentRequest = () => {
                 </DialogHeader>
                 <Select>
                   <SelectTrigger className="flex h-auto rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                    <SelectValue placeholder="--" />
+                    <SelectValue placeholder="-" />
                   </SelectTrigger>
                   <SelectContent>
                     <ScrollArea className="h-72" style={{maxHeight: "15em"}}>
@@ -899,7 +897,7 @@ const ACRStudentRequest = () => {
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   defaultValue={"Commonwealth Ever"}
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
               <div className="grid gap-2">
@@ -910,7 +908,7 @@ const ACRStudentRequest = () => {
                   ref={studentlineaddress2ref}
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
               <div className="grid gap-2">
@@ -920,7 +918,7 @@ const ACRStudentRequest = () => {
                 <Input
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
-                  placeholder="--"
+                  placeholder="-"
                   defaultValue={"Quezon City"}
                   ref={studentmunicipalitycityref}
                 />
@@ -934,7 +932,7 @@ const ACRStudentRequest = () => {
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   id="subject"
                   defaultValue={"NCR"}
-                  placeholder="--"
+                  placeholder="-"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -946,7 +944,7 @@ const ACRStudentRequest = () => {
                   <Input
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     id="subject"
-                    placeholder="--"
+                    placeholder="-"
                     defaultValue={"Philippines"}
                     ref={studentcountryref}
                   />
@@ -961,7 +959,7 @@ const ACRStudentRequest = () => {
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     id="subject"
                     defaultValue={"1144"}
-                    placeholder="--"
+                    placeholder="-"
                   />
                 </div>
               </div>
@@ -982,7 +980,7 @@ const ACRStudentRequest = () => {
                 <DialogTitle className="font-semibold text-[15px]">Payment Channel:</DialogTitle>
                 <Select>
                   <SelectTrigger className="flex h-auto w-full rounded-md border border-input bg-transparent px-3 py-1 text-md shadow-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                    <SelectValue placeholder="--" />
+                    <SelectValue placeholder="-" />
                   </SelectTrigger>
                   <SelectContent>
                     <ScrollArea className="h-72" style={{maxHeight: "15em"}}>

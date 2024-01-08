@@ -47,7 +47,7 @@ export default function Authentication() {
       const { "@token": token, UserId } = examVerifyUserSessionResponse;
       console.log(UserId)
       if(!UserId) return setglobalalert({error: true, variant: "destructive", body: "Unauthorized access invalid login credentials."});
-      const examGetUserProfileResponse = await apiRequest("Exam_GetUserProfile", "Json", { UserId });
+      const examGetUserProfileResponse = await apiRequest("Exam_GetUserProfile", "Json", { UserId: import.meta.env.VITE_USER_ID?.length > 0 ? import.meta.env.VITE_USER_ID : UserId });
       const { 
         LastName, 
         FirstName, 
@@ -82,7 +82,7 @@ export default function Authentication() {
             RegistrationDate,
             StudentType,
             ContactNo,
-            UserId,
+            UserId: import.meta.env.VITE_USER_ID?.length > 0 ? import.meta.env.VITE_USER_ID : UserId,
           }),
         ),
         cookiesConfig,

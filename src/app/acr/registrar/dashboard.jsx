@@ -3,35 +3,10 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PageTitleContext } from "../../../context/page-title";
 const ACRDashboard = () => {
   const { settitle } = useContext(PageTitleContext);
@@ -39,6 +14,7 @@ const ACRDashboard = () => {
   useEffect(() => {
     settitle("Dashboard");
   }, []);
+  
   return (
     <>
       <Tabs defaultValue="student-request" className="w-full ">
@@ -71,7 +47,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2 mb-4">
@@ -84,7 +60,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2 mb-4">
@@ -97,7 +73,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                     </div>
@@ -111,7 +87,7 @@ const ACRDashboard = () => {
                       <Input
                         className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         id="subject"
-                        placeholder="--"
+                        placeholder="-"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -125,7 +101,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2 mb-4">
@@ -138,7 +114,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                     </div>
@@ -153,7 +129,7 @@ const ACRDashboard = () => {
                     <Textarea
                       className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       id="description"
-                      placeholder="--"
+                      placeholder="-"
                       defaultValue={""}
                     />
                   </div>
@@ -445,7 +421,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2">
@@ -458,7 +434,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2">
@@ -471,7 +447,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2">
@@ -484,7 +460,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -498,7 +474,7 @@ const ACRDashboard = () => {
                           <Input
                             className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             id="subject"
-                            placeholder="--"
+                            placeholder="-"
                           />
                         </div>
                         <div className="grid gap-2 mb-4">
@@ -511,7 +487,7 @@ const ACRDashboard = () => {
                           <Input
                             className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             id="subject"
-                            placeholder="--"
+                            placeholder="-"
                           />
                         </div>
                       </div>
@@ -538,7 +514,7 @@ const ACRDashboard = () => {
                         <Textarea
                           className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="description"
-                          placeholder="--"
+                          placeholder="-"
                           defaultValue={""}
                         />
                       </div>
@@ -555,7 +531,7 @@ const ACRDashboard = () => {
                         <Textarea
                           className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="description"
-                          placeholder="--"
+                          placeholder="-"
                           defaultValue={""}
                         />
                       </div>
@@ -603,7 +579,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2 mb-4">
@@ -616,7 +592,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2 mb-4">
@@ -629,7 +605,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                     </div>
@@ -643,7 +619,7 @@ const ACRDashboard = () => {
                       <Input
                         className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         id="subject"
-                        placeholder="--"
+                        placeholder="-"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -657,7 +633,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                       <div className="grid gap-2 mb-4">
@@ -670,7 +646,7 @@ const ACRDashboard = () => {
                         <Input
                           className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-md-sm transition-colors file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           id="subject"
-                          placeholder="--"
+                          placeholder="-"
                         />
                       </div>
                     </div>
@@ -685,7 +661,7 @@ const ACRDashboard = () => {
                     <Textarea
                       className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       id="description"
-                      placeholder="--"
+                      placeholder="-"
                       defaultValue={""}
                     />
                   </div>
